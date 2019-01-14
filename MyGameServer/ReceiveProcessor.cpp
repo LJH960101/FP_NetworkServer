@@ -54,7 +54,8 @@ bool CReciveProcessor::ReceiveData(SOCKET_INFO * socketInfo, const int & receive
 			// 이미 존재한다면, 존재하는 사람을 튕겨버림.
 			FPlayerInfo* beforeUser = CServerNetworkSystem::GetInstance()->PlayerManager->GetPlayerById(steamID);
 			if (beforeUser) {
-				CServerNetworkSystem::CloseConnection(beforeUser->socketInfo);
+				if(beforeUser->socket != socketInfo->sock) CServerNetworkSystem::CloseConnection(beforeUser->socketInfo);
+				else break;
 			}
 
 			// 스팀ID 갱신
