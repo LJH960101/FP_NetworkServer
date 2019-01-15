@@ -179,8 +179,9 @@ void CServerNetworkSystem::ServerProcessThread(CServerNetworkSystem * sns)
 {
 	std::chrono::seconds sleepDuration(3);
 	while (isRun) {
-		int num = 0;
+		int num = -1;
 		while (true) {
+			++num;
 			try {
 				std::chrono::system_clock::time_point currentTime = std::chrono::system_clock::now();
 				FPlayerInfo* playerInfo = sns->PlayerManager->GetPlayerByNum(num);

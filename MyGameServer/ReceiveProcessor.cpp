@@ -54,7 +54,7 @@ bool CReciveProcessor::ReceiveData(SOCKET_INFO * socketInfo, const int & receive
 			// 이미 존재한다면, 존재하는 사람을 튕겨버림.
 			FPlayerInfo* beforeUser = CServerNetworkSystem::GetInstance()->PlayerManager->GetPlayerById(steamID);
 			if (beforeUser) {
-				if(beforeUser->socket != socketInfo->sock) CServerNetworkSystem::CloseConnection(beforeUser->socketInfo);
+				if (beforeUser->socket != socketInfo->sock) CServerNetworkSystem::CloseConnection(beforeUser->socketInfo);
 				else break;
 			}
 
@@ -75,7 +75,32 @@ bool CReciveProcessor::ReceiveData(SOCKET_INFO * socketInfo, const int & receive
 			break;
 		}
 		case C_Match_InviteFriend_Request:
+		{
+			UINT64 steamID = CSerializer::UInt64Deserializer(recvBuf + pos);
+			if (steamID == 0) break;
+			// 플레이어를 찾아, 플레이어에게 수락 의사를 묻는다.
+			FPlayerInfo* targetUser = CServerNetworkSystem::GetInstance()->PlayerManager->GetPlayerById(steamID);
+			if (targetUser) {
+				UINT64 senderId = CServerNetworkSystem::GetInstance()->PlayerManager->
+					GetPlayerBySocket(socketInfo->sock)->steamID;
+				// 초대자의 이름을 담아 보낸다.
+				char senderIdBuf[10], finalBuf[20];
+				int uiLen = CSerializer::UInt64Serializer(senderIdBuf, senderId);
+				int allLen = CSerializer::SerializeWithEnum(S_Match_InviteFriend_Request, senderIdBuf, uiLen, finalBuf);
+				int retval = send(targetUser->socket, finalBuf, allLen, 0);
+				printf("%d\n", retval);
+			}
+
+
+#ifdef DEBUG_RECV_MSG
+			printf("[%s:%d] : C_Match_InviteFriend_Request %llu\n", inet_ntoa(socketInfo->addr.sin_addr),
+				ntohs(socketInfo->addr.sin_port), steamID);
+			if (targetUser) printf("Request Success\n");
+			else printf("Request failed : target nullptr\n");
+#endif
+			pos += sizeof(UINT64);
 			break;
+		}
 		case C_Match_InviteFriend_Answer:
 			break;
 		case C_Match_FriendKick_Request:
