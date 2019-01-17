@@ -15,12 +15,14 @@ enum ELogLevel;
 class CRoomManager;
 class CPlayerManager;
 using std::map;
+struct FPlayerInfo;
 
 struct SOCKET_INFO
 {
 	OVERLAPPED overlapped;
 	SOCKET sock;
 	SOCKADDR_IN addr;
+	FPlayerInfo* player;
 	char buf[BUFSIZE];
 	WSABUF wsabuf;
 };
@@ -32,8 +34,8 @@ public:
 	~CServerNetworkSystem();
 	bool Run();
 	void WriteLog(ELogLevel level, std::string msg);
-	static void SendData(SOCKET_INFO* socketInfo, const char* buf, const int& sendLen);
-	static void CloseConnection(SOCKET_INFO * socketInfo);
+	void SendData(SOCKET_INFO* socketInfo, const char* buf, const int& sendLen);
+	void CloseConnection(SOCKET_INFO * socketInfo);
 	CRoomManager* RoomManager;
 	CPlayerManager* PlayerManager;
 private:

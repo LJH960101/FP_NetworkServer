@@ -20,6 +20,8 @@ enum EMessageType {
 	S_Match_InviteFriend_Request,
 	// 클라에서 친구 초대 요청 응답
 	C_Match_InviteFriend_Answer,
+	// 서버에서 친구 초대 실패 응답
+	S_Match_InviteFriend_Failed,
 	// 클라에서 친구 강퇴 요청
 	C_Match_FriendKick_Request,
 	// 서버에서 친구 강퇴 통보

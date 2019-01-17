@@ -149,8 +149,13 @@ bool CServerNetworkSystem::Run()
 		newPlayer.lastPingTime = std::chrono::system_clock::now();
 		newPlayer.lastPongTime = std::chrono::system_clock::now();
 		newPlayer.socketInfo = ptr;
-		PlayerManager->AddPlayer(newPlayer);
+		FPlayerInfo* player = PlayerManager->AddPlayer(newPlayer);
 		sockStates[ptr->sock] = true;
+
+		ptr->player = player;
+
+		// 새로운 방을 만들어서 플레이어에게 할당한다.
+		RoomManager->CreateRoom(player);
 
 		// Start Async IO
 		flags = 0;
@@ -195,7 +200,7 @@ void CServerNetworkSystem::ServerProcessThread(CServerNetworkSystem * sns)
 						ntohs(playerInfo->socketInfo->addr.sin_port));
 #endif // DEBUG_RECV_MSG
 
-					CloseConnection(playerInfo->socketInfo);
+					sns->CloseConnection(playerInfo->socketInfo);
 				}
 				// 스팀아이디가 없다면 핑대신 스팀 요청을 보낸다.
 				else if (playerInfo->steamID == 0 && pingDelay.count() >= NONE_STEAM_PING_DELAY) {
@@ -206,7 +211,7 @@ void CServerNetworkSystem::ServerProcessThread(CServerNetworkSystem * sns)
 
 					char sendBuf[10];
 					int len = CSerializer::SerializeWithEnum(S_Common_RequestId, nullptr, 0, sendBuf);
-					SendData(playerInfo->socketInfo, sendBuf, len);
+					sns->SendData(playerInfo->socketInfo, sendBuf, len);
 					playerInfo->lastPingTime = currentTime;
 				}
 				// 스팀아이디가 있다면 핑만 보낸다.
@@ -218,7 +223,7 @@ void CServerNetworkSystem::ServerProcessThread(CServerNetworkSystem * sns)
 
 					char sendBuf[10];
 					int len = CSerializer::SerializeWithEnum(COMMON_PING, nullptr, 0, sendBuf);
-					SendData(playerInfo->socketInfo, sendBuf, len);
+					sns->SendData(playerInfo->socketInfo, sendBuf, len);
 					playerInfo->lastPingTime = currentTime;
 				}
 			}
@@ -262,7 +267,7 @@ DWORD WINAPI CServerNetworkSystem::WorkerThread(LPVOID arg)
 						&temp1, FALSE, &temp2);
 					owner->WriteLog(Warning, "WSAGetOverlappedResult FAILED");
 				}
-				CloseConnection(ptr);
+				owner->CloseConnection(ptr);
 				continue;
 			}
 		}
@@ -270,7 +275,7 @@ DWORD WINAPI CServerNetworkSystem::WorkerThread(LPVOID arg)
 			std::string errorLog = ("[GetQueuedCompletionStatus Exception] %s ", e.what());
 			printf_s("%s", errorLog.c_str());
 			owner->WriteLog(Error, errorLog);
-			CloseConnection(ptr);
+			owner->CloseConnection(ptr);
 		}
 
 
@@ -280,7 +285,7 @@ DWORD WINAPI CServerNetworkSystem::WorkerThread(LPVOID arg)
 				std::string errorLog = CLog::Format("[ReceiveData Error] %s", inet_ntoa(ptr->addr.sin_addr));
 				printf_s("%s", errorLog.c_str());
 				owner->WriteLog(Error, errorLog);
-				CloseConnection(ptr);
+				owner->CloseConnection(ptr);
 			}
 			else owner->ReceiveStart(ptr);
 		}
@@ -288,7 +293,7 @@ DWORD WINAPI CServerNetworkSystem::WorkerThread(LPVOID arg)
 			std::string errorLog = ("[ReceiveData Exception] %s : %s", inet_ntoa(ptr->addr.sin_addr), e.what());
 			printf_s("%s", errorLog.c_str());
 			owner->WriteLog(Error, errorLog);
-			CloseConnection(ptr);
+			owner->CloseConnection(ptr);
 		}
 	}
 	return 0;
@@ -331,6 +336,8 @@ void CServerNetworkSystem::SendData(SOCKET_INFO * socketInfo, const char* buf, c
 
 void CServerNetworkSystem::CloseConnection(SOCKET_INFO * socketInfo)
 {
+	GetInstance()->RoomManager->OutRoom(socketInfo->player);
+	
 	try {
 		if (socketInfo == nullptr || !(GetInstance()->sockStates[socketInfo->sock])) return;
 	}

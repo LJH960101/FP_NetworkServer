@@ -29,7 +29,7 @@ public:
 	FPlayerInfo* GetPlayerById(const UINT64& steamID);
 	FPlayerInfo* GetPlayerBySocket(const SOCKET& targetSocket);
 	FPlayerInfo* GetPlayerByNum(const int& num);
-	void AddPlayer(FPlayerInfo playerInfo);
+	FPlayerInfo* AddPlayer(FPlayerInfo playerInfo);
 	FPlayerInfo* EditPlayerIDBySocket(const SOCKET& targetSock, const UINT64& steamID);
 	void RemovePlayerById(const UINT64& playerID);
 	void RemovePlayerBySocket(const SOCKET& playerSocket);

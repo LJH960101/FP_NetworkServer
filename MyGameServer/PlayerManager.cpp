@@ -43,13 +43,14 @@ FPlayerInfo * CPlayerManager::GetPlayerByNum(const int& num)
 	return retval;
 }
 
-void CPlayerManager::AddPlayer(FPlayerInfo playerInfo)
+FPlayerInfo* CPlayerManager::AddPlayer(FPlayerInfo playerInfo)
 {
 	FPlayerInfo* newPlayerInfo = new FPlayerInfo(playerInfo);
 
 	playersMutex.lock();
 	players.push_back(newPlayerInfo);
 	playersMutex.unlock();
+	return newPlayerInfo;
 }
 
 FPlayerInfo* CPlayerManager::EditPlayerIDBySocket(const SOCKET& targetSock, const UINT64& steamID)
