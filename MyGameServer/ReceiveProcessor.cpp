@@ -6,12 +6,18 @@
 #include "NetworkModule/NetworkData.h"
 #include "NetworkModule/Serializer.h"
 #include "NetworkModule/Log.h"
+#include "NetworkModule/MyTool.h"
+#include "RoomInfo.h"
 #include <stdio.h>
 #include <chrono>
 #include <ctime> 
+
+using namespace MyTool;
+
 bool CReciveProcessor::ReceiveData(SOCKET_INFO * socketInfo, const int & receiveLen)
 {
 	auto ServerNetworkSystem = CServerNetworkSystem::GetInstance();
+
 #ifdef ECHO_TEST
 	socketInfo->buf[receiveLen] = '\0';
 	printf("[%s:%d] : %s\n", inet_ntoa(socketInfo->addr.sin_addr),
@@ -19,21 +25,34 @@ bool CReciveProcessor::ReceiveData(SOCKET_INFO * socketInfo, const int & receive
 							socketInfo->buf);
 	CServerNetworkSystem::SendData(socketInfo, socketInfo->buf, receiveLen);
 #else
-	int pos = 0;
+
+	int cursor = 0;
 	char* recvBuf = socketInfo->buf;
-	while (pos < receiveLen) {
-		EMessageType type = CSerializer::GetEnum(recvBuf + pos);
-		pos += sizeof(EMessageType);
+	while (cursor < receiveLen) {
+		// ENUM을 제외한 길이를 계산한다.
+		int bufLen = CSerializer::IntDeserialize(recvBuf, cursor) - sizeof(EMessageType);
+		EMessageType type = CSerializer::GetEnum(recvBuf, cursor);
+
+#ifdef DEBUG_RECV_MSG
+		{
+			std::string recvLog = CLog::Format("[%s:%d] : Recv type : %d\n", 
+				inet_ntoa(socketInfo->addr.sin_addr),
+				ntohs(socketInfo->addr.sin_port), type);
+			CLog::WriteLog(ELogType::ReceiveProcessor, Warning, recvLog);
+			printf("%s\n", recvLog.c_str());
+		}
+#endif
+
 		switch (type)
 		{
 		case COMMON_ECHO:
 		{
 			// 받은 STRING 출력
-			FSerializableString res = CSerializer::StringDeserializer(recvBuf + pos);
+			FSerializableString res = CSerializer::StringDeserializer(recvBuf, cursor);
 			printf("[%s:%d] : ECHO, %s\n", inet_ntoa(socketInfo->addr.sin_addr),
 				ntohs(socketInfo->addr.sin_port),
 				res.buf);
-			pos += res.len;
+			cursor += res.len;
 			break;
 		}
 		case COMMON_PING:
@@ -42,15 +61,17 @@ bool CReciveProcessor::ReceiveData(SOCKET_INFO * socketInfo, const int & receive
 			ServerNetworkSystem->PlayerManager->
 				GetPlayerBySocket(socketInfo->sock)->lastPongTime =
 				std::chrono::system_clock::now();
+
 #ifdef DEBUG_RECV_MSG
 			printf("[%s:%d] : COMMON_PING\n", inet_ntoa(socketInfo->addr.sin_addr),
 				ntohs(socketInfo->addr.sin_port));
 #endif
+
 			break;
 		}
 		case C_Common_AnswerId:
 		{
-			UINT64 steamID = CSerializer::UInt64Deserializer(recvBuf + pos);
+			UINT64 steamID = CSerializer::UInt64Deserializer(recvBuf, cursor);
 			if (steamID == 0) break;
 			// 이미 존재한다면, 존재하는 사람을 튕겨버림.
 			FPlayerInfo* beforeUser = ServerNetworkSystem->PlayerManager->GetPlayerById(steamID);
@@ -68,50 +89,80 @@ bool CReciveProcessor::ReceiveData(SOCKET_INFO * socketInfo, const int & receive
 				GetPlayerBySocket(socketInfo->sock)->lastPongTime =
 				std::chrono::system_clock::now();
 
+			// 방 정보 전송
+			ServerNetworkSystem->RoomManager->mt_outClass.lock();
+			FRoomInfo* room = ServerNetworkSystem->RoomManager->GetRoom(ServerNetworkSystem->PlayerManager->
+														GetPlayerBySocket(socketInfo->sock));
+			room->SendRoomInfoToAllMember();
+			ServerNetworkSystem->RoomManager->mt_outClass.unlock();
+
 #ifdef DEBUG_RECV_MSG
 			printf("[%s:%d] : C_Common_AnswerId %llu\n", inet_ntoa(socketInfo->addr.sin_addr),
 				ntohs(socketInfo->addr.sin_port), steamID);
 #endif
-			pos += sizeof(UINT64);
+
 			break;
 		}
-		case C_Match_InviteFriend_Request:
+		case C_Lobby_InviteFriend_Request:
 		{
-			UINT64 steamID = CSerializer::UInt64Deserializer(recvBuf + pos);
+			UINT64 steamID = CSerializer::UInt64Deserializer(recvBuf, cursor);
 			if (steamID == 0) break;
-			// 플레이어를 찾아, 플레이어에게 수락 의사를 묻는다.
-			FPlayerInfo* targetUser = ServerNetworkSystem->PlayerManager->GetPlayerById(steamID);
-			if (targetUser) {
-				UINT64 senderId = ServerNetworkSystem->PlayerManager->
-					GetPlayerBySocket(socketInfo->sock)->steamID;
-				// 초대자의 이름을 담아 보낸다.
-				char senderIdBuf[10], finalBuf[20];
-				int uiLen = CSerializer::UInt64Serializer(senderIdBuf, senderId);
-				int allLen = CSerializer::SerializeWithEnum(S_Match_InviteFriend_Request, senderIdBuf, uiLen, finalBuf);
-				int retval = send(targetUser->socket, finalBuf, allLen, 0);
-				printf("%d\n", retval);
+			while (true) {
+				// 플레이어를 찾아, 플레이어에게 수락 의사를 묻는다.
+				FPlayerInfo* targetUser = ServerNetworkSystem->PlayerManager->GetPlayerById(steamID);
+				if (targetUser) {
+					UINT64 senderId = ServerNetworkSystem->PlayerManager->
+						GetPlayerBySocket(socketInfo->sock)->steamID;
+					// 초대자의 이름을 담아 보낸다.
+					char senderIdBuf[sizeof(UINT64)], finalBuf[sizeof(UINT64) + sizeof(EMessageType)];
+					int uintLen = CSerializer::UInt64Serializer(senderIdBuf, senderId);
+					int allLen = CSerializer::SerializeWithEnum(S_Lobby_InviteFriend_Request, senderIdBuf, uintLen, finalBuf);
+					int retval = Send(targetUser->socket, finalBuf, allLen);
+					// 전송이 불가능 하다면 연결을 끊고 다시 찾는다.
+					if (retval == -1) ServerNetworkSystem->CloseConnection(targetUser->socketInfo);
+					else {
+
+#ifdef DEBUG_RECV_MSG
+						printf("C_Lobby_InviteFriend_Request : Invite Send Success.\n");
+#endif
+
+						break;
+					}
+				}
+				// 존재 하지 않는다면, 에러를 날림.
+				else {
+					char allBuf[sizeof(EMessageType) + 40], buf[40], msg[] = "친구를 찾는데 실패하였습니다.";
+					int stringLen = (int)strlen(msg);
+					CSerializer::StringSerialize(buf, msg, stringLen);
+					int len = CSerializer::SerializeWithEnum(S_Lobby_InviteFriend_Failed, buf, stringLen, allBuf);
+					Send(socketInfo->sock, allBuf, len, 0);
+
+#ifdef DEBUG_RECV_MSG
+					printf("C_Lobby_InviteFriend_Request : Failed to find member.\n");
+#endif
+
+					break;
+				}
 			}
 
-
 #ifdef DEBUG_RECV_MSG
-			printf("[%s:%d] : C_Match_InviteFriend_Request %llu\n", inet_ntoa(socketInfo->addr.sin_addr),
+			printf("[%s:%d] : C_Lobby_InviteFriend_Request %llu\n", inet_ntoa(socketInfo->addr.sin_addr),
 				ntohs(socketInfo->addr.sin_port), steamID);
-			if (targetUser) printf("Request Success\n");
-			else printf("Request failed : target nullptr\n");
 #endif
-			pos += sizeof(UINT64);
+
 			break;
+
+
 		}
 
-		case C_Match_InviteFriend_Answer:
+		case C_Lobby_InviteFriend_Answer:
 		{
-			bool isYes = CSerializer::BoolDeserialize(recvBuf + pos);
-			pos += sizeof(bool);
-			UINT64 targetID = CSerializer::UInt64Deserializer(recvBuf + pos);
-			pos += sizeof(UINT64);
+			bool isYes = CSerializer::BoolDeserialize(recvBuf, cursor);
+			UINT64 targetID = CSerializer::UInt64Deserializer(recvBuf, cursor);
 			FPlayerInfo* innerPlayer = ServerNetworkSystem->PlayerManager->GetPlayerById(targetID);
+
 #ifdef DEBUG_RECV_MSG
-			printf("[%s:%d] : C_Match_InviteFriend_Answer by %llu\n", inet_ntoa(socketInfo->addr.sin_addr),
+			printf("[%s:%d] : C_Lobby_InviteFriend_Answer by %llu\n", inet_ntoa(socketInfo->addr.sin_addr),
 				ntohs(socketInfo->addr.sin_port), targetID);
 #endif
 
@@ -119,67 +170,155 @@ bool CReciveProcessor::ReceiveData(SOCKET_INFO * socketInfo, const int & receive
 			if (!isYes) break;
 			// 승락했다면, 룸 이동을 시도한다.
 			int outSlot;
+
+			ServerNetworkSystem->RoomManager->mt_outClass.lock();
 			// 룸이동 성공?
 			if (ServerNetworkSystem->RoomManager->MoveRoom(innerPlayer, socketInfo->player, outSlot)) {
 				FRoomInfo* innerRoom = ServerNetworkSystem->RoomManager->GetRoom(innerPlayer);
-
-				// 방 멤버의 ID코드 4개를 담은 버퍼를 만든다.
-				char allBuf[100], slot1Buf[10], slot2Buf[10], slot3Buf[10], slot4Buf[10];
-				if (innerRoom->player1 == nullptr) CSerializer::UInt64Serializer(slot1Buf, innerRoom->player1->steamID);
-				else CSerializer::UInt64Serializer(slot1Buf, 0);
-				if (innerRoom->player2 == nullptr) CSerializer::UInt64Serializer(slot2Buf, innerRoom->player2->steamID);
-				else CSerializer::UInt64Serializer(slot2Buf, 0);
-				if (innerRoom->player3 == nullptr) CSerializer::UInt64Serializer(slot3Buf, innerRoom->player3->steamID);
-				else CSerializer::UInt64Serializer(slot3Buf, 0);
-				if (innerRoom->player4 == nullptr) CSerializer::UInt64Serializer(slot4Buf, innerRoom->player4->steamID);
-				else CSerializer::UInt64Serializer(slot4Buf, 0);
-				int allLen = CSerializer::SerializeWithEnum(S_Match_InviteFriend_Answer, nullptr, 0, allBuf);
-				int uintLen = sizeof(UINT64);
-				memcpy(allBuf + allLen, slot1Buf, uintLen);
-				allLen += uintLen;
-				memcpy(allBuf + allLen, slot2Buf, uintLen);
-				allLen += uintLen;
-				memcpy(allBuf + allLen, slot3Buf, uintLen);
-				allLen += uintLen;
-				memcpy(allBuf + allLen, slot4Buf, uintLen);
-				allLen += uintLen;
-
-				// 버퍼를 보낸다.
-				if (innerRoom->player1 != nullptr) {
-					send(innerRoom->player1->socket, allBuf, allLen, 0);
-				}
-				if (innerRoom->player2 != nullptr) {
-					send(innerRoom->player1->socket, allBuf, allLen, 0);
-				}
-				if (innerRoom->player3 != nullptr) {
-					send(innerRoom->player1->socket, allBuf, allLen, 0);
-				}
-				if (innerRoom->player4 != nullptr) {
-					send(innerRoom->player1->socket, allBuf, allLen, 0);
-				}
+				innerRoom->SendRoomInfoToAllMember();
 				printf("Success to move.\n");
 			}
 			// 룸이동 실패?
 			else {
-				char buf[10];
-				int len = CSerializer::SerializeWithEnum(S_Match_InviteFriend_Failed, nullptr, 0, buf);
-				send(socketInfo->sock, buf, len, 0);
-				send(innerPlayer->socket, buf, len, 0);
+				char allBuf[sizeof(EMessageType) + 30], buf[30], msg[] = "방 이동에 실패하였습니다.";
+				int stringLen = (int)strlen(msg);
+				CSerializer::StringSerialize(buf, msg, stringLen);
+				int len = CSerializer::SerializeWithEnum(S_Lobby_InviteFriend_Failed, buf, stringLen, allBuf);
+				if (socketInfo) Send(socketInfo->sock, allBuf, len, 0);
+				if (innerPlayer) Send(innerPlayer->socket, allBuf, len, 0);
 				printf("Failed to move.\n");
 			}
+			ServerNetworkSystem->RoomManager->mt_outClass.unlock();
 			break;
 		}
-		case C_Match_FriendKick_Request:
-			break;
-		case C_Match_Start_Request:
-			break;
-		default:
-			std::string logString = CLog::Format("Unknown type! : %d", (int)type);
-			CLog::WriteLog(ReceiveProcessor, Error, logString);
+		case C_Lobby_Set_PartyKing:
+		{
+			// 파티장으로 임명할 슬롯을 파싱한다.
+			int targetSlot = CSerializer::IntDeserialize(recvBuf, cursor);
+
 #ifdef DEBUG_RECV_MSG
-			std::cout << logString << std::endl;
+			printf("[%s:%d] : C_Lobby_Set_PartyKing by %d\n", inet_ntoa(socketInfo->addr.sin_addr),
+				ntohs(socketInfo->addr.sin_port), targetSlot);
+#endif
+
+			ServerNetworkSystem->RoomManager->mt_outClass.lock();
+			// 방을 찾는다.
+			FRoomInfo* innerRoom = ServerNetworkSystem->RoomManager->GetRoom(socketInfo->player);
+			if (innerRoom == nullptr ||							// 방이 없거나
+				innerRoom->players[0] != socketInfo->player ||	// 요청자가 방장이 아니거나
+				targetSlot >= MAX_PLAYER ||						// 슬롯이 잘못 되었거나
+				targetSlot == 0 ||
+				innerRoom->players[targetSlot] == nullptr		// 슬롯에 플레이어가 없다면 무시한다.
+				) {
+				ServerNetworkSystem->RoomManager->mt_outClass.unlock();
+				break;
+			}
+
+			// 슬롯 교체
+			FPlayerInfo* temp = innerRoom->players[0];
+			innerRoom->players[0] = innerRoom->players[targetSlot];
+			innerRoom->players[targetSlot] = temp;
+			ServerNetworkSystem->RoomManager->mt_outClass.unlock();
+
+			// 파티장 교체를 통보한다.
+			innerRoom->SendRoomInfoToAllMember();
+
+			break;
+		}
+		case C_Lobby_FriendKick_Request:
+		{
+			// 강퇴할 슬롯을 파싱한다.
+			int targetSlot = CSerializer::IntDeserialize(recvBuf, cursor);
+
+#ifdef DEBUG_RECV_MSG
+			printf("[%s:%d] : C_Lobby_FriendKick_Request by %d\n", inet_ntoa(socketInfo->addr.sin_addr),
+				ntohs(socketInfo->addr.sin_port), targetSlot);
+#endif
+
+			ServerNetworkSystem->RoomManager->mt_outClass.lock();
+			// 방을 찾는다.
+			FRoomInfo* innerRoom = ServerNetworkSystem->RoomManager->GetRoom(socketInfo->player);
+			if (innerRoom == nullptr ||										// 방이 없거나
+				targetSlot < 0 ||
+				targetSlot >= MAX_PLAYER ||									// 슬롯이 잘못 되었거나
+				innerRoom->players[targetSlot] == nullptr ||				// 슬롯에 플레이어가 없거나
+				!(innerRoom->players[0] == socketInfo->player ||			// 요청자가 방장
+					innerRoom->players[targetSlot] == socketInfo->player)	// 자기 자신에 대한 처리가 아니라면 무시
+				) {
+				ServerNetworkSystem->RoomManager->mt_outClass.unlock();
+
+#ifdef DEBUG_RECV_MSG
+				printf("Failed.\n");
+#endif
+
+				break;
+			}
+
+			// 플레이어를 기존 방에서 추방시킨다음, 새로운 방에 넣어준다.
+			FPlayerInfo* kickTargetPlayer = innerRoom->players[targetSlot];
+			ServerNetworkSystem->RoomManager->OutRoom(kickTargetPlayer);
+			ServerNetworkSystem->RoomManager->CreateRoom(kickTargetPlayer);
+			FRoomInfo* kickPlayerRoom = ServerNetworkSystem->RoomManager->GetRoom(kickTargetPlayer);
+			ServerNetworkSystem->RoomManager->mt_outClass.unlock();
+
+			// 강퇴 된 이후의 방 정보를 알려준다.
+			kickPlayerRoom->SendRoomInfoToAllMember();
+
+			break;
+		}
+		case C_Lobby_MatchRequest:
+		{
+			bool isOn = CSerializer::BoolDeserialize(recvBuf, cursor);
+			if (socketInfo->player->steamID == 0) break;
+
+			// 룸매니저에 매칭 상태 변경을 요청한다.
+			ServerNetworkSystem->RoomManager->mt_outClass.lock();
+			ServerNetworkSystem->RoomManager->ChangeRoomReady(socketInfo->player, isOn);
+			ServerNetworkSystem->RoomManager->mt_outClass.unlock();
+
+#ifdef DEBUG_RECV_MSG
+			printf("[%s:%d] : C_Lobby_MatchRequest %d id : %llu\n", inet_ntoa(socketInfo->addr.sin_addr),
+				ntohs(socketInfo->addr.sin_port), isOn, socketInfo->player->steamID);
+#endif
+
+			break;
+		}
+		case C_Debug_RoomStart:
+		{
+			FRoomInfo* currentRoom = ServerNetworkSystem->RoomManager->GetRoom(socketInfo->player);
+			// 혼자 있을때만 방이동을 한다.
+			if (currentRoom->GetRoomCount() != 1) break;
+			ServerNetworkSystem->RoomManager->mt_outClass.lock();
+			ServerNetworkSystem->RoomManager->ForceJoinRoom(socketInfo->player);
+			ServerNetworkSystem->RoomManager->mt_outClass.unlock();
+
+#ifdef DEBUG_RECV_MSG
+			printf("[%s:%d] : C_Debug_RoomStart %llu\n", inet_ntoa(socketInfo->addr.sin_addr),
+				ntohs(socketInfo->addr.sin_port), socketInfo->player->steamID);
 #endif
 			break;
+		}
+		case C_Debug_GameStart:
+		{
+			FRoomInfo* currentRoom = ServerNetworkSystem->RoomManager->GetRoom(socketInfo->player);
+			if (currentRoom->GetRoomCount() != 1) break;
+			ServerNetworkSystem->RoomManager->mt_outClass.lock();
+			bool onSuccess = ServerNetworkSystem->RoomManager->ForceJoinGameRoom(socketInfo->player);
+			// 게임중인 룸이 없다면, 게임룸으로 강제 이동한다.
+			if (!onSuccess) ServerNetworkSystem->RoomManager->ForceChangeGameState(currentRoom);
+			ServerNetworkSystem->RoomManager->mt_outClass.unlock();
+
+#ifdef DEBUG_RECV_MSG
+			printf("[%s:%d] : C_Debug_GameStart %llu newRoom? : %d\n", inet_ntoa(socketInfo->addr.sin_addr),
+				ntohs(socketInfo->addr.sin_port), socketInfo->player->steamID, !onSuccess);
+#endif
+			break;
+		}
+		default:
+			std::string logString = CLog::Format("Unknown type!!!! : %d", (int)type);
+			CLog::WriteLog(ReceiveProcessor, Error, logString);
+			std::cout << logString << std::endl;
+			cursor += bufLen;
 		}
 	}
 #endif

@@ -12,6 +12,12 @@ using std::mutex;
 typedef std::chrono::time_point<std::chrono::system_clock> TIME;
 struct SOCKET_INFO;
 
+enum EGameState
+{
+	LOBBY,
+	READY,
+	GAME
+};
 struct FPlayerInfo
 {
 	UINT64 steamID;
@@ -20,6 +26,7 @@ struct FPlayerInfo
 	TIME lastPingTime;
 	TIME lastPongTime;
 	SOCKET_INFO* socketInfo;
+	EGameState state;
 };
 
 class CPlayerManager

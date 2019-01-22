@@ -17,7 +17,9 @@
 #include <chrono>
 #include <ctime> 
 #include <thread>
+#include "NetworkModule/MyTool.h"
 
+using namespace MyTool;
 using std::thread;
 
 CServerNetworkSystem* CServerNetworkSystem::instance = nullptr;
@@ -149,6 +151,7 @@ bool CServerNetworkSystem::Run()
 		newPlayer.lastPingTime = std::chrono::system_clock::now();
 		newPlayer.lastPongTime = std::chrono::system_clock::now();
 		newPlayer.socketInfo = ptr;
+		newPlayer.state = LOBBY;
 		FPlayerInfo* player = PlayerManager->AddPlayer(newPlayer);
 		sockStates[ptr->sock] = true;
 
@@ -182,7 +185,7 @@ void CServerNetworkSystem::WriteLog(ELogLevel level, std::string msg)
 }
 void CServerNetworkSystem::ServerProcessThread(CServerNetworkSystem * sns)
 {
-	std::chrono::seconds sleepDuration(3);
+	std::chrono::seconds sleepDuration(1);
 	while (isRun) {
 		int num = -1;
 		while (true) {
@@ -209,9 +212,9 @@ void CServerNetworkSystem::ServerProcessThread(CServerNetworkSystem * sns)
 						ntohs(playerInfo->socketInfo->addr.sin_port));
 #endif // DEBUG_RECV_MSG
 
-					char sendBuf[10];
-					int len = CSerializer::SerializeWithEnum(S_Common_RequestId, nullptr, 0, sendBuf);
-					sns->SendData(playerInfo->socketInfo, sendBuf, len);
+					char sendBuf[sizeof(EMessageType)];
+					CSerializer::SerializeEnum(S_Common_RequestId, sendBuf);
+					sns->SendData(playerInfo->socketInfo, sendBuf, sizeof(EMessageType));
 					playerInfo->lastPingTime = currentTime;
 				}
 				// 스팀아이디가 있다면 핑만 보낸다.
@@ -221,19 +224,23 @@ void CServerNetworkSystem::ServerProcessThread(CServerNetworkSystem * sns)
 						ntohs(playerInfo->socketInfo->addr.sin_port));
 #endif // DEBUG_RECV_MSG
 
-					char sendBuf[10];
-					int len = CSerializer::SerializeWithEnum(COMMON_PING, nullptr, 0, sendBuf);
-					sns->SendData(playerInfo->socketInfo, sendBuf, len);
+					char sendBuf[sizeof(EMessageType)];
+					CSerializer::SerializeEnum(COMMON_PING, sendBuf);
+					sns->SendData(playerInfo->socketInfo, sendBuf, sizeof(EMessageType));
 					playerInfo->lastPingTime = currentTime;
 				}
 			}
 			catch (std::exception& e) {
 				// throw을 삼키고, 로그를 출력후 계속 진행.
 				std::string newLog = CLog::Format("[ServerProcessThread:Exception] : %s", e.what());
-				printf_s("%s\n", newLog);
+				printf_s("%s\n", newLog.c_str());
 				CLog::WriteLog(ServerNetworkSystem, Error, newLog);
 			}
 		}
+
+		sns->RoomManager->mt_outClass.lock();
+		sns->RoomManager->Update();
+		sns->RoomManager->mt_outClass.unlock();
 
 		// 완료되면 3초 쉰다.
 		std::this_thread::sleep_for(sleepDuration);
@@ -295,6 +302,12 @@ DWORD WINAPI CServerNetworkSystem::WorkerThread(LPVOID arg)
 			owner->WriteLog(Error, errorLog);
 			owner->CloseConnection(ptr);
 		}
+		catch (int e) {
+			std::string errorLog = ("[ReceiveData Exception] %s", inet_ntoa(ptr->addr.sin_addr));
+			printf_s("%s", errorLog.c_str());
+			owner->WriteLog(Error, errorLog);
+			owner->CloseConnection(ptr);
+		}
 	}
 	return 0;
 }
@@ -327,7 +340,7 @@ void CServerNetworkSystem::SendData(SOCKET_INFO * socketInfo, const char* buf, c
 {
 	socketInfo->wsabuf.len = sendLen;
 	strcpy_s(socketInfo->buf, buf);
-	int retval = sendto(socketInfo->sock, buf, sendLen, 0, (sockaddr*)&socketInfo->addr, sizeof(socketInfo->addr));
+	int retval = Send(socketInfo->sock, buf, sendLen);
 	if (retval == SOCKET_ERROR) {
 		CloseConnection(socketInfo);
 		return;
@@ -345,7 +358,7 @@ void CServerNetworkSystem::CloseConnection(SOCKET_INFO * socketInfo)
 	{
 		// throw을 삼키고, 로그를 출력후 리턴
 		std::string newLog = CLog::Format("[CloseConnection:Exception] : %s", e.what());
-		printf_s("%s\n", newLog);
+		printf_s("%s\n", newLog.c_str());
 		CLog::WriteLog(ServerNetworkSystem, Error, newLog);
 		return;
 	}

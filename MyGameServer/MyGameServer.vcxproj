@@ -156,15 +156,19 @@
   <ItemGroup>
     <ClInclude Include="NetworkModule\GameInfo.h" />
     <ClInclude Include="NetworkModule\Log.h" />
+    <ClInclude Include="NetworkModule\MyTool.h" />
     <ClInclude Include="NetworkModule\NetworkData.h" />
     <ClInclude Include="NetworkModule\Serializer.h" />
     <ClInclude Include="PlayerManager.h" />
+    <ClInclude Include="RoomInfo.h" />
     <ClInclude Include="RoomManager.h" />
     <ClInclude Include="ServerNetworkSystem.h" />
     <ClInclude Include="ReceiveProcessor.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="NetworkModule\MyTool.cpp" />
     <ClCompile Include="PlayerManager.cpp" />
+    <ClCompile Include="RoomInfo.cpp" />
     <ClCompile Include="RoomManager.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="NetworkModule\Log.cpp" />

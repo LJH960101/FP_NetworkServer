@@ -45,6 +45,12 @@
     <ClInclude Include="ReceiveProcessor.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="RoomInfo.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="NetworkModule\MyTool.h">
+      <Filter>Header Files\NetworkModule</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="NetworkModule\Log.cpp">
@@ -67,6 +73,12 @@
     </ClCompile>
     <ClCompile Include="ReceiveProcessor.cpp">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="RoomInfo.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="NetworkModule\MyTool.cpp">
+      <Filter>Source Files\NetworkModule</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

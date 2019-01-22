@@ -10,28 +10,37 @@ enum EMessageType {
 	// 스팀 ID 요청
 	S_Common_RequestId,
 	C_Common_AnswerId,
+	// 디버그 전용 메세지
+	// 대기룸 시작
+	C_Debug_RoomStart,
+	// 게임룸 강제 시작
+	C_Debug_GameStart,
+
+	// 서버에서 룸 정보 전송
+	S_Room_Info,
+	// 서버에서 룸 변경 내용 전송
+	S_Room_ChangeState,
 
 	// MATCH -----
 	// 클라에서 친구 초대 요청
-	C_Match_InviteFriend_Request,
-	// 서버에서 친구 초대 결과 응답
-	S_Match_InviteFriend_Answer,
+	C_Lobby_InviteFriend_Request,
 	// 서버에서 친구 초대 승락 요청
-	S_Match_InviteFriend_Request,
+	S_Lobby_InviteFriend_Request,
 	// 클라에서 친구 초대 요청 응답
-	C_Match_InviteFriend_Answer,
+	C_Lobby_InviteFriend_Answer,
 	// 서버에서 친구 초대 실패 응답
-	S_Match_InviteFriend_Failed,
+	S_Lobby_InviteFriend_Failed,
+	// 클라에서 파티장 설정
+	C_Lobby_Set_PartyKing,
 	// 클라에서 친구 강퇴 요청
-	C_Match_FriendKick_Request,
-	// 서버에서 친구 강퇴 통보
-	S_Match_FriendKick_Notification,
+	C_Lobby_FriendKick_Request,
+
 	// 클라에서 매칭 시작 요청 
-	C_Match_Start_Request,
+	C_Lobby_MatchRequest,
 	// 서버에서 매칭 시작 응답
-	S_Match_Start_Answer,
+	S_Lobby_MatchAnswer,
 	// 서버에서 매칭 성공 통보
-	S_Match_Success_Notification,
+	S_Lobby_GameStart,
 
 	MAX
 };
