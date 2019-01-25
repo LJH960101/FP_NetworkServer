@@ -42,6 +42,11 @@ enum EMessageType {
 	// 서버에서 매칭 성공 통보
 	S_Lobby_GameStart,
 
+	// INGAME
+	// Spawn
+	C_INGAME_SPAWN,
+	S_INGAME_SPAWN,
+
 	MAX
 };
 

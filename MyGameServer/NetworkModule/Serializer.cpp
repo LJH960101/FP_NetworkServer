@@ -32,8 +32,9 @@ int CSerializer::BoolSerialize(char * buf, const bool& data)
 
 bool CSerializer::BoolDeserialize(const char * buf, int& cursor)
 {
+	bool result = static_cast<bool>(*(buf + cursor));
 	cursor += sizeof(bool);
-	return buf + cursor;
+	return result;
 }
 
 int CSerializer::IntSerialize(char * buf, const INT32& val)

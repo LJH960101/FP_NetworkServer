@@ -314,6 +314,25 @@ bool CReciveProcessor::ReceiveData(SOCKET_INFO * socketInfo, const int & receive
 #endif
 			break;
 		}
+		case C_INGAME_SPAWN:
+		{
+			FRoomInfo* targetRoom = ServerNetworkSystem->RoomManager->GetRoom(socketInfo->player);
+			// 방장이라면 그대로 전달해준다.
+			if (targetRoom->players[0] == socketInfo->player) {
+				char* newBuf = new char[bufLen + sizeof(EMessageType)];
+				CSerializer::SerializeEnum(S_INGAME_SPAWN, newBuf);
+				memcpy(newBuf + sizeof(EMessageType), recvBuf + cursor, bufLen);
+				targetRoom->SendToOtherMember(socketInfo->player->steamID, newBuf, bufLen + sizeof(EMessageType));
+				delete[] newBuf;
+			}
+			cursor += bufLen;
+
+#ifdef DEBUG_RECV_MSG
+			printf("[%s:%d] : C_INGAME_SPAWN\n", inet_ntoa(socketInfo->addr.sin_addr),
+				ntohs(socketInfo->addr.sin_port), socketInfo->player->steamID);
+#endif
+			break;
+		}
 		default:
 			std::string logString = CLog::Format("Unknown type!!!! : %d", (int)type);
 			CLog::WriteLog(ReceiveProcessor, Error, logString);
