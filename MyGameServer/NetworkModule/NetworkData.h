@@ -47,6 +47,10 @@ enum EMessageType {
 	C_INGAME_SPAWN,
 	S_INGAME_SPAWN,
 
+	// RPC
+	C_INGAME_RPC,
+	S_INGAME_RPC,
+
 	MAX
 };
 

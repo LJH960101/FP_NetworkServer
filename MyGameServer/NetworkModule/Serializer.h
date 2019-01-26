@@ -15,6 +15,9 @@ public:
 	static int BoolSerialize(char* buf, const bool& data);
 	static bool BoolDeserialize(const char* buf, int& cursor);
 
+	static int CharSerialize(char* buf, const char& data);
+	static char CharDeserialize(const char* buf, int& cursor);
+
 	static int IntSerialize(char* buf, const INT32& val);
 	static INT32 IntDeserialize(char* buf, int& cursor);
 

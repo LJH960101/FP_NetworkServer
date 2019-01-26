@@ -333,6 +333,62 @@ bool CReciveProcessor::ReceiveData(SOCKET_INFO * socketInfo, const int & receive
 #endif
 			break;
 		}
+		case C_INGAME_RPC:
+		{
+			char type = CSerializer::CharDeserialize(recvBuf, cursor);
+			bufLen -= 1; // 캐릭터 바이트 사이즈 만큼 뺀다.
+			FRoomInfo* targetRoom = ServerNetworkSystem->RoomManager->GetRoom(socketInfo->player);
+
+			switch (type)
+			{
+			case 0:
+			{
+				// 멀티캐스트
+				char* buf = new char[bufLen + sizeof(EMessageType)];
+
+				CSerializer::SerializeEnum(S_INGAME_RPC, buf);
+				memcpy(buf + sizeof(EMessageType), recvBuf + cursor, bufLen);
+				targetRoom->SendToOtherMember(socketInfo->player->steamID, buf, bufLen + sizeof(EMessageType));
+
+				delete[] buf;
+				break;
+			}
+			case 1:
+			{
+				// 마스터에서 처리.
+				// 송신자가 마스터라면 무시한다.
+				if (targetRoom->players[0] == socketInfo->player) break;
+
+				// 마스터에게 전달
+				char* buf = new char[bufLen + sizeof(EMessageType)];
+
+				CSerializer::SerializeEnum(S_INGAME_RPC, buf);
+				memcpy(buf + sizeof(EMessageType), recvBuf + cursor, bufLen);
+				Send(targetRoom->players[0]->socket, buf, bufLen + sizeof(EMessageType));
+				delete[] buf;
+
+				break;
+			}
+			case 2:
+			{
+				// 타겟에서 처리
+				// TODO
+				break;
+			}
+			default:
+				CLog::WriteLog(ReceiveProcessor, Error, CLog::Format("C_INGAME_RPC : Unknown type."));
+				printf("[%s:%d] : Unknown type.\n", inet_ntoa(socketInfo->addr.sin_addr),
+					ntohs(socketInfo->addr.sin_port), socketInfo->player->steamID);
+				break;
+			}
+			cursor += bufLen;
+
+#ifdef DEBUG_RECV_MSG
+			printf("[%s:%d] : C_INGAME_RPC.\n", inet_ntoa(socketInfo->addr.sin_addr),
+				ntohs(socketInfo->addr.sin_port));
+#endif
+			break;
+		}
 		default:
 			std::string logString = CLog::Format("Unknown type!!!! : %d", (int)type);
 			CLog::WriteLog(ReceiveProcessor, Error, logString);

@@ -18,23 +18,36 @@ int CSerializer::SerializeWithEnum(const EMessageType& type, const char* inBuf, 
 	return intBufSize + bufLen;
 }
 
-EMessageType CSerializer::GetEnum(char * buf, int& cursor)
-{
-	int type = IntDeserialize(buf, cursor);
-	return EMessageType(type);
-}
-
 int CSerializer::BoolSerialize(char * buf, const bool& data)
 {
 	buf[0] = data;
-	return sizeof(bool);
+	return 1;
 }
 
 bool CSerializer::BoolDeserialize(const char * buf, int& cursor)
 {
 	bool result = static_cast<bool>(*(buf + cursor));
-	cursor += sizeof(bool);
+	cursor += 1;
 	return result;
+}
+
+int CSerializer::CharSerialize(char * buf, const char& data)
+{
+	buf[0] = data;
+	return 1;
+}
+
+char CSerializer::CharDeserialize(const char * buf, int& cursor)
+{
+	char result = *(buf + cursor);
+	cursor += 1;
+	return result;
+}
+
+EMessageType CSerializer::GetEnum(char * buf, int& cursor)
+{
+	int type = IntDeserialize(buf, cursor);
+	return EMessageType(type);
 }
 
 int CSerializer::IntSerialize(char * buf, const INT32& val)
