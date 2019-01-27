@@ -51,6 +51,10 @@ enum EMessageType {
 	C_INGAME_RPC,
 	S_INGAME_RPC,
 
+	// RPC
+	C_INGAME_SyncVar,
+	S_INGAME_SyncVar,
+
 	MAX
 };
 

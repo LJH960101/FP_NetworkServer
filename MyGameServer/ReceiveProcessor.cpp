@@ -389,6 +389,26 @@ bool CReciveProcessor::ReceiveData(SOCKET_INFO * socketInfo, const int & receive
 #endif
 			break;
 		}
+		case C_INGAME_SyncVar:
+		{
+			FRoomInfo* targetRoom = ServerNetworkSystem->RoomManager->GetRoom(socketInfo->player);
+			// 송신자가 마스터가 아니라면 무시한다.
+			if (targetRoom->players[0] != socketInfo->player) {
+				cursor += bufLen;
+				break;
+			}
+
+			// Slave들에게 전달
+			char* buf = new char[bufLen + sizeof(EMessageType)];
+
+			CSerializer::SerializeEnum(S_INGAME_SyncVar, buf);
+			memcpy(buf + sizeof(EMessageType), recvBuf + cursor, bufLen);
+			targetRoom->SendToOtherMember(socketInfo->player->steamID, buf, bufLen + sizeof(EMessageType));
+			delete[] buf;
+
+			cursor += bufLen;
+			break;
+		}
 		default:
 			std::string logString = CLog::Format("Unknown type!!!! : %d", (int)type);
 			CLog::WriteLog(ReceiveProcessor, Error, logString);
