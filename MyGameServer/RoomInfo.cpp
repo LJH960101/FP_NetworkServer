@@ -3,22 +3,22 @@
 #include "PlayerManager.h"
 #include "RoomManager.h"
 #include "NetworkModule/MyTool.h"
-
+#include <memory>
+using namespace std;
+typedef lock_guard<mutex> Lock;
 using namespace MyTool;
 
 FRoomInfo * CRoomManager::GetRoom(FPlayerInfo* innerMember)
 {
 	if (innerMember == nullptr) return nullptr;
-	mt_room.lock();
+	Lock locker(mt_room);
 	for (auto i = rooms.begin(); i != rooms.end(); ++i) {
 		for (int j = 0; j < MAX_PLAYER; ++j) {
 			if ((*i)->players[j] == innerMember) {
-				mt_room.unlock();
 				return *i;
 			}
 		}
 	}
-	mt_room.unlock();
 	return nullptr;
 }
 

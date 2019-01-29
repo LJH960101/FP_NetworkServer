@@ -11,8 +11,11 @@
 #include <stdio.h>
 #include <chrono>
 #include <ctime> 
+#include <memory>
 
 using namespace MyTool;
+using namespace std;
+typedef lock_guard<mutex> Lock;
 
 bool CReciveProcessor::ReceiveData(SOCKET_INFO * socketInfo, const int & receiveLen)
 {
@@ -90,11 +93,11 @@ bool CReciveProcessor::ReceiveData(SOCKET_INFO * socketInfo, const int & receive
 				std::chrono::system_clock::now();
 
 			// 방 정보 전송
-			ServerNetworkSystem->RoomManager->mt_outClass.lock();
+
+			Lock roomManagerLocker(ServerNetworkSystem->RoomManager->mt_outClass);
 			FRoomInfo* room = ServerNetworkSystem->RoomManager->GetRoom(ServerNetworkSystem->PlayerManager->
 														GetPlayerBySocket(socketInfo->sock));
 			room->SendRoomInfoToAllMember();
-			ServerNetworkSystem->RoomManager->mt_outClass.unlock();
 
 #ifdef DEBUG_RECV_MSG
 			printf("[%s:%d] : C_Common_AnswerId %llu\n", inet_ntoa(socketInfo->addr.sin_addr),
@@ -171,7 +174,7 @@ bool CReciveProcessor::ReceiveData(SOCKET_INFO * socketInfo, const int & receive
 			// 승락했다면, 룸 이동을 시도한다.
 			int outSlot;
 
-			ServerNetworkSystem->RoomManager->mt_outClass.lock();
+			Lock roomManagerLocker(ServerNetworkSystem->RoomManager->mt_outClass);
 			// 룸이동 성공?
 			if (ServerNetworkSystem->RoomManager->MoveRoom(innerPlayer, socketInfo->player, outSlot)) {
 				FRoomInfo* innerRoom = ServerNetworkSystem->RoomManager->GetRoom(innerPlayer);
@@ -188,7 +191,6 @@ bool CReciveProcessor::ReceiveData(SOCKET_INFO * socketInfo, const int & receive
 				if (innerPlayer) Send(innerPlayer->socket, allBuf, len, 0);
 				printf("Failed to move.\n");
 			}
-			ServerNetworkSystem->RoomManager->mt_outClass.unlock();
 			break;
 		}
 		case C_Lobby_Set_PartyKing:
@@ -200,8 +202,7 @@ bool CReciveProcessor::ReceiveData(SOCKET_INFO * socketInfo, const int & receive
 			printf("[%s:%d] : C_Lobby_Set_PartyKing by %d\n", inet_ntoa(socketInfo->addr.sin_addr),
 				ntohs(socketInfo->addr.sin_port), targetSlot);
 #endif
-
-			ServerNetworkSystem->RoomManager->mt_outClass.lock();
+			Lock roomManagerLocker(ServerNetworkSystem->RoomManager->mt_outClass);
 			// 방을 찾는다.
 			FRoomInfo* innerRoom = ServerNetworkSystem->RoomManager->GetRoom(socketInfo->player);
 			if (innerRoom == nullptr ||							// 방이 없거나
@@ -210,7 +211,6 @@ bool CReciveProcessor::ReceiveData(SOCKET_INFO * socketInfo, const int & receive
 				targetSlot == 0 ||
 				innerRoom->players[targetSlot] == nullptr		// 슬롯에 플레이어가 없다면 무시한다.
 				) {
-				ServerNetworkSystem->RoomManager->mt_outClass.unlock();
 				break;
 			}
 
@@ -218,7 +218,6 @@ bool CReciveProcessor::ReceiveData(SOCKET_INFO * socketInfo, const int & receive
 			FPlayerInfo* temp = innerRoom->players[0];
 			innerRoom->players[0] = innerRoom->players[targetSlot];
 			innerRoom->players[targetSlot] = temp;
-			ServerNetworkSystem->RoomManager->mt_outClass.unlock();
 
 			// 파티장 교체를 통보한다.
 			innerRoom->SendRoomInfoToAllMember();
@@ -234,8 +233,7 @@ bool CReciveProcessor::ReceiveData(SOCKET_INFO * socketInfo, const int & receive
 			printf("[%s:%d] : C_Lobby_FriendKick_Request by %d\n", inet_ntoa(socketInfo->addr.sin_addr),
 				ntohs(socketInfo->addr.sin_port), targetSlot);
 #endif
-
-			ServerNetworkSystem->RoomManager->mt_outClass.lock();
+			Lock roomManagerLocker(ServerNetworkSystem->RoomManager->mt_outClass);
 			// 방을 찾는다.
 			FRoomInfo* innerRoom = ServerNetworkSystem->RoomManager->GetRoom(socketInfo->player);
 			if (innerRoom == nullptr ||										// 방이 없거나
@@ -245,7 +243,6 @@ bool CReciveProcessor::ReceiveData(SOCKET_INFO * socketInfo, const int & receive
 				!(innerRoom->players[0] == socketInfo->player ||			// 요청자가 방장
 					innerRoom->players[targetSlot] == socketInfo->player)	// 자기 자신에 대한 처리가 아니라면 무시
 				) {
-				ServerNetworkSystem->RoomManager->mt_outClass.unlock();
 
 #ifdef DEBUG_RECV_MSG
 				printf("Failed.\n");
@@ -259,7 +256,6 @@ bool CReciveProcessor::ReceiveData(SOCKET_INFO * socketInfo, const int & receive
 			ServerNetworkSystem->RoomManager->OutRoom(kickTargetPlayer);
 			ServerNetworkSystem->RoomManager->CreateRoom(kickTargetPlayer);
 			FRoomInfo* kickPlayerRoom = ServerNetworkSystem->RoomManager->GetRoom(kickTargetPlayer);
-			ServerNetworkSystem->RoomManager->mt_outClass.unlock();
 
 			// 강퇴 된 이후의 방 정보를 알려준다.
 			kickPlayerRoom->SendRoomInfoToAllMember();
@@ -272,9 +268,8 @@ bool CReciveProcessor::ReceiveData(SOCKET_INFO * socketInfo, const int & receive
 			if (socketInfo->player->steamID == 0) break;
 
 			// 룸매니저에 매칭 상태 변경을 요청한다.
-			ServerNetworkSystem->RoomManager->mt_outClass.lock();
+			Lock roomManagerLocker(ServerNetworkSystem->RoomManager->mt_outClass);
 			ServerNetworkSystem->RoomManager->ChangeRoomReady(socketInfo->player, isOn);
-			ServerNetworkSystem->RoomManager->mt_outClass.unlock();
 
 #ifdef DEBUG_RECV_MSG
 			printf("[%s:%d] : C_Lobby_MatchRequest %d id : %llu\n", inet_ntoa(socketInfo->addr.sin_addr),
@@ -288,9 +283,8 @@ bool CReciveProcessor::ReceiveData(SOCKET_INFO * socketInfo, const int & receive
 			FRoomInfo* currentRoom = ServerNetworkSystem->RoomManager->GetRoom(socketInfo->player);
 			// 혼자 있을때만 방이동을 한다.
 			if (currentRoom->GetRoomCount() != 1) break;
-			ServerNetworkSystem->RoomManager->mt_outClass.lock();
+			Lock roomManagerLocker(ServerNetworkSystem->RoomManager->mt_outClass);
 			ServerNetworkSystem->RoomManager->ForceJoinRoom(socketInfo->player);
-			ServerNetworkSystem->RoomManager->mt_outClass.unlock();
 
 #ifdef DEBUG_RECV_MSG
 			printf("[%s:%d] : C_Debug_RoomStart %llu\n", inet_ntoa(socketInfo->addr.sin_addr),
@@ -302,11 +296,10 @@ bool CReciveProcessor::ReceiveData(SOCKET_INFO * socketInfo, const int & receive
 		{
 			FRoomInfo* currentRoom = ServerNetworkSystem->RoomManager->GetRoom(socketInfo->player);
 			if (currentRoom->GetRoomCount() != 1) break;
-			ServerNetworkSystem->RoomManager->mt_outClass.lock();
+			Lock roomManagerLocker(ServerNetworkSystem->RoomManager->mt_outClass);
 			bool onSuccess = ServerNetworkSystem->RoomManager->ForceJoinGameRoom(socketInfo->player);
 			// 게임중인 룸이 없다면, 게임룸으로 강제 이동한다.
 			if (!onSuccess) ServerNetworkSystem->RoomManager->ForceChangeGameState(currentRoom);
-			ServerNetworkSystem->RoomManager->mt_outClass.unlock();
 
 #ifdef DEBUG_RECV_MSG
 			printf("[%s:%d] : C_Debug_GameStart %llu newRoom? : %d\n", inet_ntoa(socketInfo->addr.sin_addr),
@@ -319,17 +312,16 @@ bool CReciveProcessor::ReceiveData(SOCKET_INFO * socketInfo, const int & receive
 			FRoomInfo* targetRoom = ServerNetworkSystem->RoomManager->GetRoom(socketInfo->player);
 			// 방장이라면 그대로 전달해준다.
 			if (targetRoom->players[0] == socketInfo->player) {
-				char* newBuf = new char[bufLen + sizeof(EMessageType)];
-				CSerializer::SerializeEnum(S_INGAME_SPAWN, newBuf);
-				memcpy(newBuf + sizeof(EMessageType), recvBuf + cursor, bufLen);
-				targetRoom->SendToOtherMember(socketInfo->player->steamID, newBuf, bufLen + sizeof(EMessageType));
-				delete[] newBuf;
+				shared_ptr<char[]> pNewBuf(new char[bufLen + sizeof(EMessageType)]);
+				CSerializer::SerializeEnum(S_INGAME_SPAWN, pNewBuf.get());
+				memcpy(pNewBuf.get() + sizeof(EMessageType), recvBuf + cursor, bufLen);
+				targetRoom->SendToOtherMember(socketInfo->player->steamID, pNewBuf.get(), bufLen + sizeof(EMessageType));
 			}
 			cursor += bufLen;
 
 #ifdef DEBUG_RECV_MSG
 			printf("[%s:%d] : C_INGAME_SPAWN\n", inet_ntoa(socketInfo->addr.sin_addr),
-				ntohs(socketInfo->addr.sin_port), socketInfo->player->steamID);
+				ntohs(socketInfo->addr.sin_port));
 #endif
 			break;
 		}
@@ -344,13 +336,11 @@ bool CReciveProcessor::ReceiveData(SOCKET_INFO * socketInfo, const int & receive
 			case 0:
 			{
 				// 멀티캐스트
-				char* buf = new char[bufLen + sizeof(EMessageType)];
+				shared_ptr<char[]> pNewBuf(new char[bufLen + sizeof(EMessageType)]);
 
-				CSerializer::SerializeEnum(S_INGAME_RPC, buf);
-				memcpy(buf + sizeof(EMessageType), recvBuf + cursor, bufLen);
-				targetRoom->SendToOtherMember(socketInfo->player->steamID, buf, bufLen + sizeof(EMessageType));
-
-				delete[] buf;
+				CSerializer::SerializeEnum(S_INGAME_RPC, pNewBuf.get());
+				memcpy(pNewBuf.get() + sizeof(EMessageType), recvBuf + cursor, bufLen);
+				targetRoom->SendToOtherMember(socketInfo->player->steamID, pNewBuf.get(), bufLen + sizeof(EMessageType));
 				break;
 			}
 			case 1:
@@ -360,12 +350,11 @@ bool CReciveProcessor::ReceiveData(SOCKET_INFO * socketInfo, const int & receive
 				if (targetRoom->players[0] == socketInfo->player) break;
 
 				// 마스터에게 전달
-				char* buf = new char[bufLen + sizeof(EMessageType)];
+				shared_ptr<char[]> pNewBuf(new char[bufLen + sizeof(EMessageType)]);
 
-				CSerializer::SerializeEnum(S_INGAME_RPC, buf);
-				memcpy(buf + sizeof(EMessageType), recvBuf + cursor, bufLen);
-				Send(targetRoom->players[0]->socket, buf, bufLen + sizeof(EMessageType));
-				delete[] buf;
+				CSerializer::SerializeEnum(S_INGAME_RPC, pNewBuf.get());
+				memcpy(pNewBuf.get() + sizeof(EMessageType), recvBuf + cursor, bufLen);
+				Send(targetRoom->players[0]->socket, pNewBuf.get(), bufLen + sizeof(EMessageType));
 
 				break;
 			}
@@ -378,7 +367,7 @@ bool CReciveProcessor::ReceiveData(SOCKET_INFO * socketInfo, const int & receive
 			default:
 				CLog::WriteLog(ReceiveProcessor, Error, CLog::Format("C_INGAME_RPC : Unknown type."));
 				printf("[%s:%d] : Unknown type.\n", inet_ntoa(socketInfo->addr.sin_addr),
-					ntohs(socketInfo->addr.sin_port), socketInfo->player->steamID);
+					ntohs(socketInfo->addr.sin_port));
 				break;
 			}
 			cursor += bufLen;
@@ -399,12 +388,11 @@ bool CReciveProcessor::ReceiveData(SOCKET_INFO * socketInfo, const int & receive
 			}
 
 			// Slave들에게 전달
-			char* buf = new char[bufLen + sizeof(EMessageType)];
+			shared_ptr<char[]> pNewBuf(new char[bufLen + sizeof(EMessageType)]);
 
-			CSerializer::SerializeEnum(S_INGAME_SyncVar, buf);
-			memcpy(buf + sizeof(EMessageType), recvBuf + cursor, bufLen);
-			targetRoom->SendToOtherMember(socketInfo->player->steamID, buf, bufLen + sizeof(EMessageType));
-			delete[] buf;
+			CSerializer::SerializeEnum(S_INGAME_SyncVar, pNewBuf.get());
+			memcpy(pNewBuf.get() + sizeof(EMessageType), recvBuf + cursor, bufLen);
+			targetRoom->SendToOtherMember(socketInfo->player->steamID, pNewBuf.get(), bufLen + sizeof(EMessageType));
 
 			cursor += bufLen;
 			break;

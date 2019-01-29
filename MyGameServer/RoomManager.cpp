@@ -2,7 +2,9 @@
 #include "RoomInfo.h"
 #include "NetworkModule/Serializer.h"
 #include "NetworkModule/MyTool.h"
-
+#include <memory>
+using namespace std;
+typedef lock_guard<mutex> Lock;
 using namespace MyTool;
 
 CRoomManager::CRoomManager()
@@ -33,7 +35,7 @@ bool CRoomManager::CreateRoom(FPlayerInfo* member)
 
 void CRoomManager::DeleteRoom(const UINT64& roomNumb)
 {
-	mt_room.lock();
+	Lock locker(mt_room);
 	for (list<FRoomInfo*>::iterator it = rooms.begin();
 		it != rooms.end();)
 	{
@@ -48,7 +50,6 @@ void CRoomManager::DeleteRoom(const UINT64& roomNumb)
 		else
 			++it;
 	}
-	mt_room.unlock();
 }
 
 void CRoomManager::ChangeRoomInfo(FRoomInfo * roomInfo, const EGameState& state, bool bWithOutMutex)
@@ -143,8 +144,8 @@ void CRoomManager::ChangeRoomReady(FPlayerInfo* player, const bool& isOn)
 			for (int j = 0; j < MAX_PLAYER; ++j) {
 				if (room->players[j] != nullptr) Send(room->players[j]->socket, buf, sizeof(EMessageType) + sizeof(bool) + sizeof(int), 0);
 			}
-			mt_room.unlock();
 
+			mt_room.unlock();
 			CheckRoom(room);
 			return;
 		}
