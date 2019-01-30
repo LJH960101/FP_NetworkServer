@@ -288,7 +288,7 @@ DWORD WINAPI CServerNetworkSystem::WorkerThread(LPVOID arg)
 
 		try {
 			// ReceiveProcess and Receive Again.
-			if (!CReciveProcessor::ReceiveData(ptr, cbTransferred)) {
+			if (!CReceiveProcessor::ReceiveData(ptr, cbTransferred)) {
 				std::string errorLog = CLog::Format("[ReceiveData Error] %s", inet_ntoa(ptr->addr.sin_addr));
 				printf_s("%s", errorLog.c_str());
 				owner->WriteLog(Error, errorLog);

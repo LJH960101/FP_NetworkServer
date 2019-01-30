@@ -1,6 +1,6 @@
 #pragma once
 
-#define DEBUG_RECV_MSG
+//#define DEBUG_RECV_MSG
 #define MAX_PLAYER 4
 #include "NetworkModule/NetworkData.h"
 #include "PlayerManager.h"

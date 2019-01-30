@@ -17,7 +17,7 @@ using namespace MyTool;
 using namespace std;
 typedef lock_guard<mutex> Lock;
 
-bool CReciveProcessor::ReceiveData(SOCKET_INFO * socketInfo, const int & receiveLen)
+bool CReceiveProcessor::ReceiveData(SOCKET_INFO * socketInfo, const int & receiveLen)
 {
 	auto ServerNetworkSystem = CServerNetworkSystem::GetInstance();
 
@@ -408,16 +408,16 @@ bool CReciveProcessor::ReceiveData(SOCKET_INFO * socketInfo, const int & receive
 	return true;
 }
 
-void CReciveProcessor::WriteLog(ELogLevel level, std::string msg)
+void CReceiveProcessor::WriteLog(ELogLevel level, std::string msg)
 {
 	CLog::WriteLog(ServerNetworkSystem, level, msg);
 }
 
-CReciveProcessor::CReciveProcessor()
+CReceiveProcessor::CReceiveProcessor()
 {
 }
 
 
-CReciveProcessor::~CReciveProcessor()
+CReceiveProcessor::~CReceiveProcessor()
 {
 }
