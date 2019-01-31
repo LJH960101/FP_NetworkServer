@@ -117,11 +117,14 @@ bool CServerNetworkSystem::Run()
 		if (client_sock == INVALID_SOCKET) {
 			WriteLog(Error, "Failed to accept.");
 			return false;
+		
 		}
 		std::string clientAcceptLog = CLog::Format("[Accept] IP=%s, PORT=%d", 
 			inet_ntoa(clientaddr.sin_addr),
 			ntohs(clientaddr.sin_port));
+#ifdef DEBUG_RECV_MSG
 		std::cout << clientAcceptLog << std::endl;
+#endif
 		WriteLog(Warning, clientAcceptLog);
 		
 		// Connect to IOCP
@@ -369,6 +372,8 @@ void CServerNetworkSystem::CloseConnection(SOCKET_INFO * socketInfo)
 		inet_ntoa(socketInfo->addr.sin_addr),
 		ntohs(socketInfo->addr.sin_port));
 	CLog::WriteLog(ServerNetworkSystem, Warning, closeLog);
+#ifdef DEBUG_RECV_MSG
 	std::cout << closeLog << std::endl;
+#endif
 	delete socketInfo;
 }
