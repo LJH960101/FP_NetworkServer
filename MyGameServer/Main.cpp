@@ -5,18 +5,19 @@
 #include "NetworkModule/NetworkData.h"
 #include <iostream>
 #include <WinSock2.h>
+#include "NetworkModule/MyTool.h"
 
-// #define SERIAL_TEST
+ //#define SERIAL_TEST
 
 int main()
 {
 #ifdef SERIAL_TEST
-	char buf[1000];
-	int a = -500;
+	char buf[100];
 	int c = 0;
+	FSerializableVector3 a(1, 2, 3);
 	std::cout << a << std::endl;
-	int vecBufSize = CSerializer::IntSerialize(buf, a);
-	a = CSerializer::IntDeserialize(buf, c);
+	int vecBufSize = CSerializer::Vector3Serialize(buf, a);
+	a = CSerializer::Vector3Deserialize(buf, c);
 	std::cout << a << std::endl;
 #else
 	CLog::WriteLog(NetworkManager, Warning, CLog::Format("Game Server Start"));

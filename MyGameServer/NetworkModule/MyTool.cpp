@@ -10,3 +10,24 @@ int MyTool::Send(SOCKET sock, const char * buf, int len, int flags)
 	delete[] newBuf;
 	return retval;
 }
+
+bool MyTool::IsBigEndian()
+{
+	static bool onInit = false;
+	static bool isBigEndian = false;
+
+	if (!onInit) {
+		onInit = true;
+		unsigned int x = 0x76543210;
+		char *c = (char*)&x;
+		if (*c == 0x10)
+		{
+			isBigEndian = false;
+		}
+		else
+		{
+			isBigEndian = true;
+		}
+	}
+	return isBigEndian;
+}

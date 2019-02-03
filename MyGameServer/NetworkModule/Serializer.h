@@ -36,6 +36,8 @@ public:
 	static int StringSerialize(char* buf, std::string source);
 
 private:
+	static void Serialize(char* source, char* dest, int size);
+	static void DeSerialize(char* source, char* dest, int size);
 	CSerializer();
 	~CSerializer();
 };

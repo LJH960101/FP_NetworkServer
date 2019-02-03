@@ -1,6 +1,7 @@
 #include "Serializer.h"
-#include <WinSock2.h>
+#include "MyTool.h"
 #include <stdio.h>
+using namespace MyTool;
 
 int CSerializer::SerializeEnum(const EMessageType & type, char * outBuf)
 {
@@ -52,75 +53,60 @@ EMessageType CSerializer::GetEnum(char * buf, int& cursor)
 
 int CSerializer::IntSerialize(char * buf, const INT32& val)
 {
-	buf[0] = val;
-	buf[1] = val >> 8;
-	buf[2] = val >> 16;
-	buf[3] = val >> 24;
+	Serialize((char*)&val, buf, sizeof(INT32));
 	return sizeof(INT32);
 }
 
 INT32 CSerializer::IntDeserialize(char * buf, int& cursor)
 {
-	INT32 res = buf[cursor] | (buf[cursor + 1] << 8) | (buf[cursor + 2] << 16) | (buf[cursor + 3] << 24);
+	INT32 res = 0;
+	DeSerialize(buf + cursor, (char*)&res, sizeof(INT32));
 	cursor += sizeof(INT32);
 	return res;
 }
 
 int CSerializer::UInt64Serializer(char * buf, const unsigned __int64 & val)
 {
-	unsigned __int64 _val = htonll(val);
-	if (val == 0) _val = 0LLU;
-	else htonll(val);
-	memcpy(buf, &_val, sizeof(unsigned __int64));
+	Serialize((char*)&val, buf, sizeof(unsigned __int64));
 	return sizeof(unsigned __int64);
 }
 
 unsigned __int64 CSerializer::UInt64Deserializer(char * buf, int& cursor)
 {
-	unsigned __int64 result;
-	memcpy(&result, buf + cursor, sizeof(unsigned __int64));
+	unsigned __int64 res = 0;
+	DeSerialize(buf + cursor, (char*)&res, sizeof(unsigned __int64));
 	cursor += sizeof(unsigned __int64);
-	return ntohll(result);
+	return res;
 }
 
 int CSerializer::FloatSerialize(char * buf, const float& val)
 {
-	UINT _val = htonf(val);
-	memcpy(buf, &_val, sizeof(UINT));
+	Serialize((char*)&val, buf, sizeof(float));
 	return sizeof(float);
 }
 
 float CSerializer::FloatDeserialize(char * buf, int& cursor)
 {
-	UINT result;
-	memcpy(&result, buf + cursor, sizeof(float));
+	float res = 0;
+	DeSerialize(buf + cursor, (char*)&res, sizeof(float));
 	cursor += sizeof(float);
-	return ntohf(result);
+	return res;
 }
 
 int CSerializer::Vector3Serialize(char * buf, const FSerializableVector3 & val)
 {
-	UINT x = htonf(val.x);
-	UINT y = htonf(val.y);
-	UINT z = htonf(val.z);
-	memcpy(buf, &x, sizeof(UINT));
-	memcpy(buf + sizeof(UINT), &y, sizeof(UINT));
-	memcpy(buf + sizeof(UINT) * 2, &z, sizeof(UINT));
-	return sizeof(UINT) * 3;
+	FloatSerialize(buf, val.x);
+	FloatSerialize(buf + sizeof(float), val.y);
+	FloatSerialize(buf + (sizeof(float) * 2), val.z);
+	return sizeof(float) * 3;
 }
 
 FSerializableVector3 CSerializer::Vector3Deserialize(char * buf, int& cursor)
 {
-	UINT x = 0;
-	UINT y = 0;
-	UINT z = 0;
-	memcpy(&x, buf + cursor, sizeof(UINT));
-	memcpy(&y, buf + cursor + sizeof(UINT), sizeof(UINT));
-	memcpy(&z, buf + cursor + sizeof(UINT) * 2, sizeof(UINT));
-	cursor += sizeof(UINT) * 3;
-	FSerializableVector3 result(ntohf(x),
-					ntohf(y),
-					ntohf(z));
+	float x = FloatDeserialize(buf, cursor);
+	float y = FloatDeserialize(buf, cursor);
+	float z = FloatDeserialize(buf, cursor);
+	FSerializableVector3 result(x, y, z);
 	return result;
 }
 
@@ -150,6 +136,30 @@ int CSerializer::StringSerialize(char * buf, std::string source)
 	int retval = IntSerialize(buf, len);
 	memcpy(buf + retval, source.c_str(), len);
 	return len + retval;
+}
+
+void CSerializer::Serialize(char* source, char* dest, int size)
+{
+	if (IsBigEndian()) {
+		memcpy(dest, source, size);
+	}
+	else {
+		for (int i = 0; i < size; ++i) {
+			dest[i] = *(source + (size - 1 - i));
+		}
+	}
+}
+
+void CSerializer::DeSerialize(char * source, char * dest, int size)
+{
+	if (IsBigEndian()) {
+		memcpy(dest, source, size);
+	}
+	else {
+		for (int i = 0; i < size; ++i) {
+			dest[i] = *(source + (size - 1 - i));
+		}
+	}
 }
 
 CSerializer::CSerializer()
