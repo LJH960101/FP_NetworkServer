@@ -1,4 +1,7 @@
 #include "RoomInfo.h"
+#include "ServerNetworkSystem.h"
+#include "UDP/UDPProcessor.h"
+#include "TCP/TCPProcessor.h"
 #include "NetworkModule/Serializer.h"
 #include "PlayerManager.h"
 #include "RoomManager.h"
@@ -25,11 +28,18 @@ FRoomInfo * CRoomManager::GetRoom(FPlayerInfo* innerMember)
 	return nullptr;
 }
 
-void FRoomInfo::SendToAllMember(const char * buf, const int & len, const int& flag)
+void FRoomInfo::SendToAllMember(const char * buf, const int & len, const int& flag, const bool& isReliable)
 {
 	for (int i = 0; i < MAX_PLAYER; ++i) {
 		if (players[i] != nullptr) {
-			Send(players[i]->socket, buf, len, flag);
+			if (isReliable || players[i]->socketInfo->udpAddr == nullptr) {
+				if (players[i]->socketInfo->udpAddr == nullptr) CServerNetworkSystem::GetInstance()->GetUDPProcessor()->RequestUDPReg(players[i]);
+				Send(players[i]->socket, buf, len, flag);
+			}
+			else {
+				CServerNetworkSystem::GetInstance()->GetUDPProcessor()->Send(buf, len, 
+					(sockaddr*) players[i]->socketInfo->udpAddr, sizeof(SOCKADDR_IN));
+			}
 
 #ifdef DEBUG_RECV_MSG
 			printf("[SendToAllMember] %llu\n", players[i]->steamID);
@@ -39,17 +49,31 @@ void FRoomInfo::SendToAllMember(const char * buf, const int & len, const int& fl
 	}
 }
 
-void FRoomInfo::SendToOtherMember(const UINT64 member, const char * buf, const int & len, const int& flag)
+void FRoomInfo::SendToOtherMember(const UINT64 member, const char * buf, const int & len, const int& flag, const bool& isReliable)
 {
 	for (int i = 0; i < MAX_PLAYER; ++i) {
-		if (players[i] != nullptr && players[i]->steamID != member) Send(players[i]->socket, buf, len, flag);
+		if (players[i] != nullptr && players[i]->steamID != member) {
+			if (isReliable || players[i]->socketInfo->udpAddr == nullptr) {
+				if(players[i]->socketInfo->udpAddr == nullptr) CServerNetworkSystem::GetInstance()->GetUDPProcessor()->RequestUDPReg(players[i]);
+				Send(players[i]->socket, buf, len, flag);
+			}
+			else {
+				CServerNetworkSystem::GetInstance()->GetUDPProcessor()->Send(buf, len,
+					(sockaddr*)players[i]->socketInfo->udpAddr, sizeof(SOCKADDR_IN));
+			}
+
+#ifdef DEBUG_RECV_MSG
+			printf("[SendToOtherMember] %llu\n", players[i]->steamID);
+#endif
+		}
+
 	}
 }
 
 void FRoomInfo::SendRoomInfoToAllMember()
 {
 #ifdef DEBUG_RECV_MSG
-	printf("[FRoomInfo::SendRoomInfoToAllMember] ");
+	printf("[FRoomInfo::SendRoomInfoToAllMember]\n");
 #endif
 
 	// 방 멤버의 ID코드 MAX_PLAYER개를 담은 버퍼를 만든다.

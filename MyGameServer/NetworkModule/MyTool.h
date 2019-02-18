@@ -7,6 +7,6 @@
 namespace MyTool {
 	// 길이를 맨앞에 붙여서 보낸다.
 	int Send(SOCKET sock, const char* buf, int len, int flags = 0);
-	int SendTo(SOCKET sock, const char* buf, const int& len, sockaddr* addr);
+	int SendTo(SOCKET sock, const char* buf, const int& len, sockaddr* addr, const int& addrLen);
 	bool IsBigEndian();
 }

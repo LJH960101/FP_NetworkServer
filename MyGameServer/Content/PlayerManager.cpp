@@ -1,6 +1,7 @@
 #include "PlayerManager.h"
 #include "NetworkModule/Log.h"
 #include "ServerNetworkSystem.h"
+#include "TCP/TCPProcessor.h"
 #include <memory>
 using namespace std;
 typedef lock_guard<mutex> Lock;
@@ -42,6 +43,46 @@ FPlayerInfo * CPlayerManager::GetPlayerByNum(const int& num)
 	FPlayerInfo* retval = nullptr; 
 	Lock locker(playersMutex);
 	if (num < players.size()) retval = players[num];
+	return retval;
+}
+
+FPlayerInfo * CPlayerManager::GetPlayerByUDPAddr(const SOCKADDR_IN & addr)
+{
+	FPlayerInfo* retval = nullptr;
+	Lock locker(playersMutex);
+	for (auto i : players) {
+		if (i->socketInfo->udpAddr!=nullptr && 
+			i->socketInfo->udpAddr->sin_addr.s_addr == addr.sin_addr.s_addr && 
+			i->socketInfo->udpAddr->sin_port == addr.sin_port) {
+			retval = i;
+			break;
+		}
+	}
+	return retval;
+}
+
+FPlayerInfo* CPlayerManager::GetNoUDPAddrPlayerByTCPAddr(const SOCKADDR_IN& addr)
+{
+	FPlayerInfo* retval = nullptr;
+	Lock locker(playersMutex);
+	for (auto i : players) {
+		if (i->socketInfo->udpAddr == nullptr && i->socketInfo->addr.sin_addr.s_addr == addr.sin_addr.s_addr) {
+			retval = i;
+			break;
+		}
+	}
+	return retval;
+}
+FPlayerInfo * CPlayerManager::GetPlayerByTCPAddr(const SOCKADDR_IN & addr)
+{
+	FPlayerInfo* retval = nullptr;
+	Lock locker(playersMutex);
+	for (auto i : players) {
+		if (i->socketInfo->addr.sin_addr.s_addr == addr.sin_addr.s_addr) {
+			retval = i;
+			break;
+		}
+	}
 	return retval;
 }
 

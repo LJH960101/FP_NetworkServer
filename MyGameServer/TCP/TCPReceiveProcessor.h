@@ -3,8 +3,7 @@
 	TCP 데이터 수신 로직만을 담은 클래스
 */
 
-//#define ECHO_TEST
-//#define DEBUG_RECV_MSG
+#include "NetworkModule/GameInfo.h"
 #include <string>
 #include "NetworkModule/Log.h"
 struct SOCKET_INFO;

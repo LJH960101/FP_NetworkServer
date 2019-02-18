@@ -362,12 +362,6 @@ bool CTCPReceiveProcessor::ReceiveData(SOCKET_INFO * socketInfo, const int & rec
 
 				break;
 			}
-			case 2:
-			{
-				// Å¸°Ù¿¡¼­ Ã³¸®
-				// TODO
-				break;
-			}
 			default:
 				CLog::WriteLog(TCPReceiveProcessor, Error, CLog::Format("C_INGAME_RPC : Unknown type."));
 				printf("[%s:%d] : Unknown type.\n", inet_ntoa(socketInfo->addr.sin_addr),

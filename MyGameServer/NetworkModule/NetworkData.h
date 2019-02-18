@@ -12,8 +12,12 @@ enum EMessageType {
 	// 핑
 	COMMON_PING,
 
+	// UDP 등록 및 핸드세이킹
 	C_UDP_Reg,
-	S_UDP_Respawn,
+	// UDP 응답
+	S_UDP_Response,
+	// UDP 요청
+	S_UDP_Request,
 
 	// 스팀 ID 요청
 	S_Common_RequestId,

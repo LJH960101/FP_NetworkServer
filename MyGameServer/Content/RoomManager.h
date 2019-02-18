@@ -3,8 +3,8 @@
 	방에 대한 내용을 관할하는 클래스
 */
 
-//#define DEBUG_RECV_MSG
 #define MAX_PLAYER 2
+#include "NetworkModule/GameInfo.h"
 #include "NetworkModule/NetworkData.h"
 #include "PlayerManager.h"
 #include <list>

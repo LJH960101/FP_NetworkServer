@@ -14,12 +14,12 @@ int MyTool::Send(SOCKET sock, const char * buf, int len, int flags)
 	return retval;
 }
 
-int MyTool::SendTo(SOCKET sock, const char* buf, const int& len, sockaddr* addr)
+int MyTool::SendTo(SOCKET sock, const char* buf, const int& len, sockaddr* addr, const int& addrLen)
 {
 	shared_ptr<char[]> newBuf(new char[len + sizeof(int)]);
 	int intLen = IntSerialize(newBuf.get(), len);
 	memcpy(newBuf.get() + intLen, buf, len);
-	int retval = sendto(sock, newBuf.get(), len, 0, addr, sizeof(addr));
+	int retval = sendto(sock, newBuf.get(), len + intLen, 0, addr, addrLen);
 	return retval;
 }
 

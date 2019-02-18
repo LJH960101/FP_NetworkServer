@@ -40,6 +40,9 @@ public:
 	FPlayerInfo* GetPlayerById(const UINT64& steamID);
 	FPlayerInfo* GetPlayerBySocket(const SOCKET& targetSocket);
 	FPlayerInfo* GetPlayerByNum(const int& num);
+	FPlayerInfo* GetPlayerByUDPAddr(const SOCKADDR_IN& addr);
+	FPlayerInfo* GetPlayerByTCPAddr(const SOCKADDR_IN& addr);
+	FPlayerInfo* GetNoUDPAddrPlayerByTCPAddr(const SOCKADDR_IN& addr);
 	FPlayerInfo* AddPlayer(FPlayerInfo playerInfo);
 	FPlayerInfo* EditPlayerIDBySocket(const SOCKET& targetSock, const UINT64& steamID);
 	int GetPlayerCount();
