@@ -1,13 +1,13 @@
 #define _WINSOCK_DEPRECATED_NO_WARNINGS
 #include "TCPProcessor.h"
 #include "ServerNetworkSystem.h"
-#include "ReceiveProcessor.h"
+#include "TCPReceiveProcessor.h"
 #include "NetworkModule/NetworkData.h"
 #include "NetworkModule/Log.h"
 #include "NetworkModule/Serializer.h"
-#include "PlayerManager.h"
-#include "RoomManager.h"
-#include "PlayerManager.h"
+#include "Content/PlayerManager.h"
+#include "Content/RoomManager.h"
+#include "Content/PlayerManager.h"
 #include <WinSock2.h>
 #include <windows.h>
 #include <stdio.h>
@@ -312,7 +312,7 @@ DWORD WINAPI CTCPProcessor::WorkerThread(LPVOID arg)
 
 		try {
 			// ReceiveProcess and Receive Again.
-			if (!CReceiveProcessor::ReceiveData(ptr, cbTransferred)) {
+			if (!CTCPReceiveProcessor::ReceiveData(ptr, cbTransferred)) {
 				std::string errorLog = CLog::Format("[ReceiveData Error] %s", inet_ntoa(ptr->addr.sin_addr));
 				printf_s("%s", errorLog.c_str());
 				owner->WriteLog(Error, errorLog);
@@ -320,13 +320,13 @@ DWORD WINAPI CTCPProcessor::WorkerThread(LPVOID arg)
 			}
 			else owner->ReceiveStart(ptr);
 		}
-		catch (std::exception e) {
+		catch (const std::exception &e) {
 			std::string errorLog = ("[ReceiveData Exception] %s : %s", inet_ntoa(ptr->addr.sin_addr), e.what());
 			printf_s("%s", errorLog.c_str());
 			owner->WriteLog(Error, errorLog);
 			owner->CloseConnection(ptr);
 		}
-		catch (int e) {
+		catch (...) {
 			std::string errorLog = ("[ReceiveData Exception] %s", inet_ntoa(ptr->addr.sin_addr));
 			printf_s("%s", errorLog.c_str());
 			owner->WriteLog(Error, errorLog);

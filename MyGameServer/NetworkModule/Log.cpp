@@ -99,8 +99,8 @@ string CLog::_LogTypeToString(const ELogType& logType)
 		return "RoomManager";
 	case PlayerManager:
 		return "PlayerManager";
-	case ReceiveProcessor:
-		return "ReceiveProcessor";
+	case TCPReceiveProcessor:
+		return "TCPReceiveProcessor";
 	case TCPProcessor:
 		return "TCPProcessor";
 	case UDPProcessor:

@@ -18,6 +18,33 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Content\PlayerManager.cpp" />
+    <ClCompile Include="Content\RoomInfo.cpp" />
+    <ClCompile Include="Content\RoomManager.cpp" />
+    <ClCompile Include="Main.cpp" />
+    <ClCompile Include="NetworkModule\Log.cpp" />
+    <ClCompile Include="NetworkModule\MyTool.cpp" />
+    <ClCompile Include="NetworkModule\Serializer.cpp" />
+    <ClCompile Include="ServerNetworkSystem.cpp" />
+    <ClCompile Include="TCP\TCPProcessor.cpp" />
+    <ClCompile Include="TCP\TCPReceiveProcessor.cpp" />
+    <ClCompile Include="UDP\UDPProcessor.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Content\PlayerManager.h" />
+    <ClInclude Include="Content\RoomInfo.h" />
+    <ClInclude Include="Content\RoomManager.h" />
+    <ClInclude Include="NetworkModule\GameInfo.h" />
+    <ClInclude Include="NetworkModule\Log.h" />
+    <ClInclude Include="NetworkModule\MyTool.h" />
+    <ClInclude Include="NetworkModule\NetworkData.h" />
+    <ClInclude Include="NetworkModule\Serializer.h" />
+    <ClInclude Include="ServerNetworkSystem.h" />
+    <ClInclude Include="TCP\TCPProcessor.h" />
+    <ClInclude Include="TCP\TCPReceiveProcessor.h" />
+    <ClInclude Include="UDP\UDPProcessor.h" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>
     <ProjectGuid>{3DADD367-E000-4194-B19A-419AAF2068B1}</ProjectGuid>
@@ -72,15 +99,19 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
+    <IncludePath>C:\Users\JH\Desktop\SharedFolder\FinalProject\Console_Server\MyGameServer\MyGameServer;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
+    <IncludePath>C:\Users\JH\Desktop\SharedFolder\FinalProject\Console_Server\MyGameServer\MyGameServer;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
+    <IncludePath>C:\Users\JH\Desktop\SharedFolder\FinalProject\Console_Server\MyGameServer\MyGameServer;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
+    <IncludePath>C:\Users\JH\Desktop\SharedFolder\FinalProject\Console_Server\MyGameServer\MyGameServer;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -153,33 +184,6 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
   </ItemDefinitionGroup>
-  <ItemGroup>
-    <ClInclude Include="NetworkModule\GameInfo.h" />
-    <ClInclude Include="NetworkModule\Log.h" />
-    <ClInclude Include="NetworkModule\MyTool.h" />
-    <ClInclude Include="NetworkModule\NetworkData.h" />
-    <ClInclude Include="NetworkModule\Serializer.h" />
-    <ClInclude Include="PlayerManager.h" />
-    <ClInclude Include="RoomInfo.h" />
-    <ClInclude Include="RoomManager.h" />
-    <ClInclude Include="ServerNetworkSystem.h" />
-    <ClInclude Include="ReceiveProcessor.h" />
-    <ClInclude Include="TCPProcessor.h" />
-    <ClInclude Include="UDPProcessor.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClCompile Include="NetworkModule\MyTool.cpp" />
-    <ClCompile Include="PlayerManager.cpp" />
-    <ClCompile Include="RoomInfo.cpp" />
-    <ClCompile Include="RoomManager.cpp" />
-    <ClCompile Include="Main.cpp" />
-    <ClCompile Include="NetworkModule\Log.cpp" />
-    <ClCompile Include="NetworkModule\Serializer.cpp" />
-    <ClCompile Include="ServerNetworkSystem.cpp" />
-    <ClCompile Include="ReceiveProcessor.cpp" />
-    <ClCompile Include="TCPProcessor.cpp" />
-    <ClCompile Include="UDPProcessor.cpp" />
-  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

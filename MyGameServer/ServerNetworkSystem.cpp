@@ -1,6 +1,6 @@
 ﻿#include "ServerNetworkSystem.h"
-#include "TCPProcessor.h"
-#include "UDPProcessor.h"
+#include "TCP/TCPProcessor.h"
+#include "UDP/UDPProcessor.h"
 #include "NetworkModule/Log.h"
 
 CServerNetworkSystem* CServerNetworkSystem::_instance = nullptr;

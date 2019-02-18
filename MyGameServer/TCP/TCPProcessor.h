@@ -1,4 +1,8 @@
 #pragma once
+/*
+	대부분의 서버로직을 총괄하는 TCP 프로토콜을 담당하는 클래스.
+	모든 로직을 총괄한다.
+*/
 
 #include "NetworkModule/GameInfo.h"
 #include <WinSock2.h>

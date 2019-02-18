@@ -1,9 +1,9 @@
 #pragma comment(lib, "ws2_32")
 #include "ServerNetworkSystem.h"
-#include "UDPProcessor.h"
-#include "TCPProcessor.h"
-#include "RoomManager.h"
-#include "PlayerManager.h"
+#include "UDP/UDPProcessor.h"
+#include "TCP/TCPProcessor.h"
+#include "Content/RoomManager.h"
+#include "Content/PlayerManager.h"
 #include "NetworkModule/Log.h"
 #include "NetworkModule/Serializer.h"
 #include "NetworkModule/NetworkData.h"

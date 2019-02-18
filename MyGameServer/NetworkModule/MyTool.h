@@ -1,4 +1,7 @@
 #pragma once
+/*
+	여러군데서 공통으로 사용하는 함수를 묶어놓은 네임스페이스
+*/
 #include <WinSock2.h>
 
 namespace MyTool {

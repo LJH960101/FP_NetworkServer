@@ -1,4 +1,8 @@
 #pragma once
+/*
+	네트워크 전송을 위해 직렬화/역직렬화를 담당하는 static only 클래스
+*/
+
 #define MAX_PLAYER 2
 #include "NetworkData.h"
 

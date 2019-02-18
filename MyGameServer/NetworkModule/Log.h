@@ -1,4 +1,8 @@
 #pragma once
+/*
+	Thread safe하게 로그를 기록하는 클래스
+*/
+
 #include <string>
 #include <queue>
 #include <mutex>
@@ -20,7 +24,7 @@ enum ELogType {
 	ServerNetworkSystem,
 	RoomManager,
 	PlayerManager,
-	ReceiveProcessor,
+	TCPReceiveProcessor,
 	TCPProcessor,
 	UDPProcessor
 };

@@ -14,83 +14,101 @@
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
     <Filter Include="Header Files\NetworkModule">
-      <UniqueIdentifier>{868e247e-9d95-4622-b21e-52a6a4e4e89a}</UniqueIdentifier>
+      <UniqueIdentifier>{91b85707-37ad-447d-b664-7f7aeefe8472}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\TCP">
+      <UniqueIdentifier>{bd590909-f90e-474e-827a-a2cc3da4d8b9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\UDP">
+      <UniqueIdentifier>{66d580b3-f513-4f98-98ed-c6cd6c6deffd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Content">
+      <UniqueIdentifier>{df76a0e0-f100-402d-8e48-90afb7be372f}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\NetworkModule">
-      <UniqueIdentifier>{e8cf5e2d-caaa-4f38-a2b8-6391bc60eb96}</UniqueIdentifier>
+      <UniqueIdentifier>{45fbdf74-8b4f-4cd2-b9c2-81545990e185}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Content">
+      <UniqueIdentifier>{e6c05253-6fb0-408b-abc1-cc154c6dff25}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\TCP">
+      <UniqueIdentifier>{deded188-1d70-40d2-8ba1-b40f73127b79}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\UDP">
+      <UniqueIdentifier>{2b1d2416-79a4-490a-bdcd-8bf952863bea}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="NetworkModule\Log.h">
-      <Filter>Header Files\NetworkModule</Filter>
-    </ClInclude>
-    <ClInclude Include="NetworkModule\Serializer.h">
-      <Filter>Header Files\NetworkModule</Filter>
-    </ClInclude>
-    <ClInclude Include="NetworkModule\NetworkData.h">
-      <Filter>Header Files\NetworkModule</Filter>
-    </ClInclude>
-    <ClInclude Include="NetworkModule\GameInfo.h">
-      <Filter>Header Files\NetworkModule</Filter>
-    </ClInclude>
-    <ClInclude Include="RoomManager.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="PlayerManager.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="ServerNetworkSystem.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="ReceiveProcessor.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="RoomInfo.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="NetworkModule\MyTool.h">
-      <Filter>Header Files\NetworkModule</Filter>
-    </ClInclude>
-    <ClInclude Include="TCPProcessor.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="UDPProcessor.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-  </ItemGroup>
-  <ItemGroup>
-    <ClCompile Include="NetworkModule\Log.cpp">
-      <Filter>Source Files\NetworkModule</Filter>
-    </ClCompile>
-    <ClCompile Include="NetworkModule\Serializer.cpp">
-      <Filter>Source Files\NetworkModule</Filter>
-    </ClCompile>
     <ClCompile Include="Main.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="RoomManager.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="PlayerManager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="ServerNetworkSystem.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="ReceiveProcessor.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="RoomInfo.cpp">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="NetworkModule\Serializer.cpp">
+      <Filter>Source Files\NetworkModule</Filter>
     </ClCompile>
     <ClCompile Include="NetworkModule\MyTool.cpp">
       <Filter>Source Files\NetworkModule</Filter>
     </ClCompile>
-    <ClCompile Include="TCPProcessor.cpp">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="NetworkModule\Log.cpp">
+      <Filter>Source Files\NetworkModule</Filter>
     </ClCompile>
-    <ClCompile Include="UDPProcessor.cpp">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="TCP\TCPReceiveProcessor.cpp">
+      <Filter>Source Files\TCP</Filter>
     </ClCompile>
+    <ClCompile Include="TCP\TCPProcessor.cpp">
+      <Filter>Source Files\TCP</Filter>
+    </ClCompile>
+    <ClCompile Include="UDP\UDPProcessor.cpp">
+      <Filter>Source Files\UDP</Filter>
+    </ClCompile>
+    <ClCompile Include="Content\PlayerManager.cpp">
+      <Filter>Source Files\Content</Filter>
+    </ClCompile>
+    <ClCompile Include="Content\RoomInfo.cpp">
+      <Filter>Source Files\Content</Filter>
+    </ClCompile>
+    <ClCompile Include="Content\RoomManager.cpp">
+      <Filter>Source Files\Content</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="ServerNetworkSystem.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="NetworkModule\GameInfo.h">
+      <Filter>Header Files\NetworkModule</Filter>
+    </ClInclude>
+    <ClInclude Include="NetworkModule\Log.h">
+      <Filter>Header Files\NetworkModule</Filter>
+    </ClInclude>
+    <ClInclude Include="NetworkModule\MyTool.h">
+      <Filter>Header Files\NetworkModule</Filter>
+    </ClInclude>
+    <ClInclude Include="NetworkModule\NetworkData.h">
+      <Filter>Header Files\NetworkModule</Filter>
+    </ClInclude>
+    <ClInclude Include="NetworkModule\Serializer.h">
+      <Filter>Header Files\NetworkModule</Filter>
+    </ClInclude>
+    <ClInclude Include="TCP\TCPProcessor.h">
+      <Filter>Header Files\TCP</Filter>
+    </ClInclude>
+    <ClInclude Include="TCP\TCPReceiveProcessor.h">
+      <Filter>Header Files\TCP</Filter>
+    </ClInclude>
+    <ClInclude Include="UDP\UDPProcessor.h">
+      <Filter>Header Files\UDP</Filter>
+    </ClInclude>
+    <ClInclude Include="Content\PlayerManager.h">
+      <Filter>Header Files\Content</Filter>
+    </ClInclude>
+    <ClInclude Include="Content\RoomInfo.h">
+      <Filter>Header Files\Content</Filter>
+    </ClInclude>
+    <ClInclude Include="Content\RoomManager.h">
+      <Filter>Header Files\Content</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

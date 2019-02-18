@@ -1,4 +1,8 @@
 ﻿#pragma once
+/*
+	네트워크에서 보내고 받는 특수 구조체, 열거형을 담은 헤더
+*/
+
 #define MAX_STRING_BUF 100
 #include <iostream>
 enum EMessageType {

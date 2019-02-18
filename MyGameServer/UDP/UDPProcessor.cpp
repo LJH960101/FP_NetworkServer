@@ -3,6 +3,9 @@
 bool CUDPProcessor::Run() {
 	if (IsRun()) return false;
 	_isRun = true;
+
+	
+
 	return true;
 }
 
