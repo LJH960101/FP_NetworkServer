@@ -14,7 +14,6 @@
 #define NONE_STEAM_PING_DELAY 1
 #define PING_DELAY 10
 #define PING_FINAL_DELAY 60
-#define BUFSIZE 1024
 
 enum ELogLevel;
 class CRoomManager;
@@ -29,6 +28,7 @@ struct SOCKET_INFO
 	OVERLAPPED overlapped;
 	SOCKET sock;
 	SOCKADDR_IN addr;
+	SOCKADDR_IN* udpAddr;
 	FPlayerInfo* player;
 	char buf[BUFSIZE];
 	WSABUF wsabuf;
@@ -41,17 +41,18 @@ public:
 	~CTCPProcessor();
 	bool Run();
 	bool IsRun() { return _isRun; }
+	void TurnOff() { _isRun = false; }
 	void SendData(SOCKET_INFO* socketInfo, const char* buf, const int& sendLen);
 	void CloseConnection(SOCKET_INFO * socketInfo);
 	CRoomManager* RoomManager;
 	CPlayerManager* PlayerManager;
 
 private:
-	thread* serverListenTh;
-	thread* serverProcTh;
+	thread* serverListenTh = nullptr;
+	thread* serverProcTh = nullptr;
 	bool _isRun;
 
-	static void WriteLog(ELogLevel level, std::string msg);
+	void WriteLog(ELogLevel level, std::string msg);
 
 	// Accept를 받는등 접속을 관할하는 쓰레드
 	void TCPListenThread();

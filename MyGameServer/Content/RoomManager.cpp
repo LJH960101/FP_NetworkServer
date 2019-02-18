@@ -3,9 +3,12 @@
 #include "NetworkModule/Serializer.h"
 #include "NetworkModule/MyTool.h"
 #include <memory>
+
 using namespace std;
-typedef lock_guard<mutex> Lock;
 using namespace MyTool;
+using namespace MySerializer;
+
+typedef lock_guard<mutex> Lock;
 
 CRoomManager::CRoomManager()
 {
@@ -136,9 +139,9 @@ void CRoomManager::ChangeRoomReady(FPlayerInfo* player, const bool& isOn)
 			else room->players[i]->state = LOBBY;
 
 			char buf[sizeof(EMessageType) + sizeof(bool) + sizeof(int)];
-			CSerializer::SerializeEnum(S_Lobby_MatchAnswer, buf);
-			CSerializer::BoolSerialize(buf + sizeof(EMessageType), isOn);
-			CSerializer::IntSerialize(buf + sizeof(EMessageType) + sizeof(bool), i);
+			SerializeEnum(S_Lobby_MatchAnswer, buf);
+			BoolSerialize(buf + sizeof(EMessageType), isOn);
+			IntSerialize(buf + sizeof(EMessageType) + sizeof(bool), i);
 
 			// 갱신 정보를 전송
 			for (int j = 0; j < MAX_PLAYER; ++j) {
@@ -211,7 +214,7 @@ void CRoomManager::Update()
 			ChangeRoomInfo(i, GAME, true);
 			i->SendRoomInfoToAllMember();
 			char buf[sizeof(EMessageType)];
-			CSerializer::SerializeEnum(S_Lobby_GameStart, buf);
+			SerializeEnum(S_Lobby_GameStart, buf);
 			i->SendToAllMember(buf, sizeof(EMessageType));
 
 			// 성공했다면 처음부터 다시 진행한다.

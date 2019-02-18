@@ -2,6 +2,8 @@
 #include "TCP/TCPProcessor.h"
 #include "UDP/UDPProcessor.h"
 #include "NetworkModule/Log.h"
+#include <iostream>
+#include <thread>
 
 CServerNetworkSystem* CServerNetworkSystem::_instance = nullptr;
 CServerNetworkSystem::CServerNetworkSystem()
@@ -24,6 +26,7 @@ CServerNetworkSystem::~CServerNetworkSystem()
 
 bool CServerNetworkSystem::Run()
 {
+	std::chrono::seconds sleepDuration(2);
 	WriteLog(Warning, "Run statred....");
 
 	// Init winSock
@@ -31,8 +34,23 @@ bool CServerNetworkSystem::Run()
 	if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0) return false;
 
 	try {
-		if (!_udpProcessor->Run()) return false;
+		// Init TCP
+		std::cout << "TCP Init...\n";
 		if (!_tcpProcessor->Run()) return false;
+		std::cout << "TCP Success!\n";
+
+		// Ready for Thread
+		std::cout << "Ready for TCP Thread is awake.....\n";
+		std::this_thread::sleep_for(sleepDuration);
+
+		// Init UDP
+		std::cout << "UDP Init...\n";
+		if (!_udpProcessor->Run()) return false;
+		std::cout << "UDP Success!\n";
+
+		// Ready for Thread
+		std::cout << "Ready for UDP Thread is awake.....\n";
+		std::this_thread::sleep_for(sleepDuration);
 	}
 	catch (const std::exception& e) {
 		WSACleanup();

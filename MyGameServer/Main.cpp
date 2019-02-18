@@ -22,8 +22,8 @@ int main()
 	int c = 0;
 	FSerializableVector3 a(1, 2, 3);
 	std::cout << a << std::endl;
-	int vecBufSize = CSerializer::Vector3Serialize(buf, a);
-	a = CSerializer::Vector3Deserialize(buf, &c);
+	int vecBufSize = Vector3Serialize(buf, a);
+	a = Vector3Deserialize(buf, &c);
 	std::cout << a << std::endl;
 #else
 	CLog::WriteLog(NetworkManager, Warning, CLog::Format("Game Server Start"));
@@ -36,9 +36,8 @@ int main()
 			std::cout << "FAIL!!";
 			throw;
 		}
-		std::cout << "Ready for Server Thread is awake.....\n";
-		Sleep(3000);
-		std::cout << "Press q to quit sever....\n";
+		std::cout << "Server is now on playable.\n";
+		std::cout << "Press q to quit sever....\n\n\n";
 		while (true) {
 			// Check Server State
 			if (!ServerSystem->GetTCPProcessor()->IsRun() || !ServerSystem->GetUDPProcessor()->IsRun()) {
@@ -52,7 +51,11 @@ int main()
 
 			if (_kbhit()) {
 				char key = _getch();
-				if (key == 'c') break;
+				if (key == 'q') {
+					ServerSystem->GetTCPProcessor()->TurnOff();
+					ServerSystem->GetUDPProcessor()->TurnOff();
+					break;
+				}
 			}
 			std::this_thread::sleep_for(sleepDuration);
 		}
@@ -61,10 +64,8 @@ int main()
 	{
 		CLog::WriteLog(NetworkManager, Critical,CLog::Format("Game Server End by ERROR: %s", e.what()));
 		CLog::Join();
-		delete ServerSystem;
 	}
 	CLog::Join();
-	delete ServerSystem;
 
 	CLog::WriteLog(NetworkManager, Warning, CLog::Format("Game Server End Successfully."));
 #endif

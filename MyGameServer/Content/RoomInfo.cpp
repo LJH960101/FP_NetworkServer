@@ -4,9 +4,12 @@
 #include "RoomManager.h"
 #include "NetworkModule/MyTool.h"
 #include <memory>
+
 using namespace std;
-typedef lock_guard<mutex> Lock;
 using namespace MyTool;
+using namespace MySerializer;
+
+typedef lock_guard<mutex> Lock;
 
 FRoomInfo * CRoomManager::GetRoom(FPlayerInfo* innerMember)
 {
@@ -51,10 +54,10 @@ void FRoomInfo::SendRoomInfoToAllMember()
 
 	// 방 멤버의 ID코드 MAX_PLAYER개를 담은 버퍼를 만든다.
 	char allBuf[MAX_PLAYER * sizeof(UINT64) + sizeof(EMessageType)];
-	int allLen = CSerializer::SerializeEnum(S_Room_Info, allBuf);
+	int allLen = SerializeEnum(S_Room_Info, allBuf);
 	for (int i = 0; i < MAX_PLAYER; ++i) {
-		if (players[i] != nullptr) CSerializer::UInt64Serialize(allBuf + allLen, players[i]->steamID);
-		else CSerializer::UInt64Serialize(allBuf + allLen, 0);
+		if (players[i] != nullptr) UInt64Serialize(allBuf + allLen, players[i]->steamID);
+		else UInt64Serialize(allBuf + allLen, 0);
 		allLen += sizeof(UINT64);
 
 #ifdef DEBUG_RECV_MSG

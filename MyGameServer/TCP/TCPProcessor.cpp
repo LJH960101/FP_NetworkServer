@@ -20,6 +20,7 @@
 #include "NetworkModule/MyTool.h"
 
 using namespace MyTool;
+using namespace MySerializer;
 
 CTCPProcessor::CTCPProcessor() : _isRun(false)
 {
@@ -30,6 +31,8 @@ CTCPProcessor::CTCPProcessor() : _isRun(false)
 
 CTCPProcessor::~CTCPProcessor()
 {
+	if(serverProcTh != nullptr) delete serverProcTh;
+	if(serverListenTh != nullptr) delete serverListenTh;
 	delete RoomManager;
 	delete PlayerManager;
 }
@@ -169,6 +172,7 @@ void CTCPProcessor::TCPListenThread()
 		ptr->sock = client_sock;
 		ptr->wsabuf.buf = ptr->buf;
 		ptr->wsabuf.len = BUFSIZE;
+		ptr->udpAddr = nullptr;
 
 		// Get Client Info
 		int addrlen = sizeof(clientaddr);
@@ -237,7 +241,7 @@ void CTCPProcessor::TCPProcessThread()
 #endif // DEBUG_RECV_MSG
 
 					char sendBuf[sizeof(EMessageType)];
-					CSerializer::SerializeEnum(S_Common_RequestId, sendBuf);
+					SerializeEnum(S_Common_RequestId, sendBuf);
 					SendData(playerInfo->socketInfo, sendBuf, sizeof(EMessageType));
 					playerInfo->lastPingTime = currentTime;
 				}
@@ -249,7 +253,7 @@ void CTCPProcessor::TCPProcessThread()
 #endif // DEBUG_RECV_MSG
 
 					char sendBuf[sizeof(EMessageType)];
-					CSerializer::SerializeEnum(COMMON_PING, sendBuf);
+					SerializeEnum(COMMON_PING, sendBuf);
 					SendData(playerInfo->socketInfo, sendBuf, sizeof(EMessageType));
 					playerInfo->lastPingTime = currentTime;
 				}
@@ -374,5 +378,6 @@ void CTCPProcessor::CloseConnection(SOCKET_INFO * socketInfo)
 #ifdef DEBUG_RECV_MSG
 	std::cout << closeLog << std::endl;
 #endif
+	if(socketInfo->udpAddr!=nullptr) delete socketInfo->udpAddr;
 	delete socketInfo;
 }

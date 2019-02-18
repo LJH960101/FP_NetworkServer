@@ -16,6 +16,8 @@
 
 using namespace MyTool;
 using namespace std;
+using namespace MySerializer;
+
 typedef lock_guard<mutex> Lock;
 
 bool CTCPReceiveProcessor::ReceiveData(SOCKET_INFO * socketInfo, const int & receiveLen)
@@ -35,8 +37,8 @@ bool CTCPReceiveProcessor::ReceiveData(SOCKET_INFO * socketInfo, const int & rec
 	char* recvBuf = socketInfo->buf;
 	while (cursor < receiveLen) {
 		// ENUM을 제외한 길이를 계산한다.
-		int bufLen = CSerializer::IntDeserialize(recvBuf, &cursor) - sizeof(EMessageType);
-		EMessageType type = CSerializer::GetEnum(recvBuf, &cursor);
+		int bufLen = IntDeserialize(recvBuf, &cursor) - sizeof(EMessageType);
+		EMessageType type = GetEnum(recvBuf, &cursor);
 
 #ifdef DEBUG_RECV_MSG
 		{
@@ -53,7 +55,7 @@ bool CTCPReceiveProcessor::ReceiveData(SOCKET_INFO * socketInfo, const int & rec
 		case COMMON_ECHO:
 		{
 			// 받은 STRING 출력
-			FSerializableString res = CSerializer::StringDeserialize(recvBuf, &cursor);
+			FSerializableString res = StringDeserialize(recvBuf, &cursor);
 			printf("[%s:%d] : ECHO, %s\n", inet_ntoa(socketInfo->addr.sin_addr),
 				ntohs(socketInfo->addr.sin_port),
 				res.buf);
@@ -76,7 +78,7 @@ bool CTCPReceiveProcessor::ReceiveData(SOCKET_INFO * socketInfo, const int & rec
 		}
 		case C_Common_AnswerId:
 		{
-			UINT64 steamID = CSerializer::UInt64Deserialize(recvBuf, &cursor);
+			UINT64 steamID = UInt64Deserialize(recvBuf, &cursor);
 			if (steamID == 0) break;
 			// 이미 존재한다면, 존재하는 사람을 튕겨버림.
 			FPlayerInfo* beforeUser = TCPProcessor->PlayerManager->GetPlayerById(steamID);
@@ -110,7 +112,7 @@ bool CTCPReceiveProcessor::ReceiveData(SOCKET_INFO * socketInfo, const int & rec
 		}
 		case C_Lobby_InviteFriend_Request:
 		{
-			UINT64 steamID = CSerializer::UInt64Deserialize(recvBuf, &cursor);
+			UINT64 steamID = UInt64Deserialize(recvBuf, &cursor);
 			if (steamID == 0) break;
 			while (true) {
 				// 플레이어를 찾아, 플레이어에게 수락 의사를 묻는다.
@@ -120,8 +122,8 @@ bool CTCPReceiveProcessor::ReceiveData(SOCKET_INFO * socketInfo, const int & rec
 						GetPlayerBySocket(socketInfo->sock)->steamID;
 					// 초대자의 이름을 담아 보낸다.
 					char senderIdBuf[sizeof(UINT64)], finalBuf[sizeof(UINT64) + sizeof(EMessageType)];
-					int uintLen = CSerializer::UInt64Serialize(senderIdBuf, senderId);
-					int allLen = CSerializer::SerializeWithEnum(S_Lobby_InviteFriend_Request, senderIdBuf, uintLen, finalBuf);
+					int uintLen = UInt64Serialize(senderIdBuf, senderId);
+					int allLen = SerializeWithEnum(S_Lobby_InviteFriend_Request, senderIdBuf, uintLen, finalBuf);
 					int retval = Send(targetUser->socket, finalBuf, allLen);
 					// 전송이 불가능 하다면 연결을 끊고 다시 찾는다.
 					if (retval == -1) TCPProcessor->CloseConnection(targetUser->socketInfo);
@@ -138,8 +140,8 @@ bool CTCPReceiveProcessor::ReceiveData(SOCKET_INFO * socketInfo, const int & rec
 				else {
 					char allBuf[sizeof(EMessageType) + 40], buf[40], msg[] = "친구를 찾는데 실패하였습니다.";
 					int stringLen = (int)strlen(msg);
-					CSerializer::StringSerialize(buf, msg, stringLen);
-					int len = CSerializer::SerializeWithEnum(S_Lobby_InviteFriend_Failed, buf, stringLen, allBuf);
+					StringSerialize(buf, msg, stringLen);
+					int len = SerializeWithEnum(S_Lobby_InviteFriend_Failed, buf, stringLen, allBuf);
 					Send(socketInfo->sock, allBuf, len, 0);
 
 #ifdef DEBUG_RECV_MSG
@@ -162,8 +164,8 @@ bool CTCPReceiveProcessor::ReceiveData(SOCKET_INFO * socketInfo, const int & rec
 
 		case C_Lobby_InviteFriend_Answer:
 		{
-			bool isYes = CSerializer::BoolDeserialize(recvBuf, &cursor);
-			UINT64 targetID = CSerializer::UInt64Deserialize(recvBuf, &cursor);
+			bool isYes = BoolDeserialize(recvBuf, &cursor);
+			UINT64 targetID = UInt64Deserialize(recvBuf, &cursor);
 			FPlayerInfo* innerPlayer = TCPProcessor->PlayerManager->GetPlayerById(targetID);
 
 #ifdef DEBUG_RECV_MSG
@@ -187,8 +189,8 @@ bool CTCPReceiveProcessor::ReceiveData(SOCKET_INFO * socketInfo, const int & rec
 			else {
 				char allBuf[sizeof(EMessageType) + 30], buf[30], msg[] = "방 이동에 실패하였습니다.";
 				int stringLen = (int)strlen(msg);
-				CSerializer::StringSerialize(buf, msg, stringLen);
-				int len = CSerializer::SerializeWithEnum(S_Lobby_InviteFriend_Failed, buf, stringLen, allBuf);
+				StringSerialize(buf, msg, stringLen);
+				int len = SerializeWithEnum(S_Lobby_InviteFriend_Failed, buf, stringLen, allBuf);
 				if (socketInfo) Send(socketInfo->sock, allBuf, len, 0);
 				if (innerPlayer) Send(innerPlayer->socket, allBuf, len, 0);
 				printf("Failed to move.\n");
@@ -198,7 +200,7 @@ bool CTCPReceiveProcessor::ReceiveData(SOCKET_INFO * socketInfo, const int & rec
 		case C_Lobby_Set_PartyKing:
 		{
 			// 파티장으로 임명할 슬롯을 파싱한다.
-			int targetSlot = CSerializer::IntDeserialize(recvBuf, &cursor);
+			int targetSlot = IntDeserialize(recvBuf, &cursor);
 
 #ifdef DEBUG_RECV_MSG
 			printf("[%s:%d] : C_Lobby_Set_PartyKing by %d\n", inet_ntoa(socketInfo->addr.sin_addr),
@@ -229,7 +231,7 @@ bool CTCPReceiveProcessor::ReceiveData(SOCKET_INFO * socketInfo, const int & rec
 		case C_Lobby_FriendKick_Request:
 		{
 			// 강퇴할 슬롯을 파싱한다.
-			int targetSlot = CSerializer::IntDeserialize(recvBuf, &cursor);
+			int targetSlot = IntDeserialize(recvBuf, &cursor);
 
 #ifdef DEBUG_RECV_MSG
 			printf("[%s:%d] : C_Lobby_FriendKick_Request by %d\n", inet_ntoa(socketInfo->addr.sin_addr),
@@ -266,7 +268,7 @@ bool CTCPReceiveProcessor::ReceiveData(SOCKET_INFO * socketInfo, const int & rec
 		}
 		case C_Lobby_MatchRequest:
 		{
-			bool isOn = CSerializer::BoolDeserialize(recvBuf, &cursor);
+			bool isOn = BoolDeserialize(recvBuf, &cursor);
 			if (socketInfo->player->steamID == 0) break;
 
 			// 룸매니저에 매칭 상태 변경을 요청한다.
@@ -315,7 +317,7 @@ bool CTCPReceiveProcessor::ReceiveData(SOCKET_INFO * socketInfo, const int & rec
 			// 방장이라면 그대로 전달해준다.
 			if (targetRoom->players[0] == socketInfo->player) {
 				shared_ptr<char[]> pNewBuf(new char[bufLen + sizeof(EMessageType)]);
-				CSerializer::SerializeEnum(S_INGAME_SPAWN, pNewBuf.get());
+				SerializeEnum(S_INGAME_SPAWN, pNewBuf.get());
 				memcpy(pNewBuf.get() + sizeof(EMessageType), recvBuf + cursor, bufLen);
 				targetRoom->SendToOtherMember(socketInfo->player->steamID, pNewBuf.get(), bufLen + sizeof(EMessageType));
 			}
@@ -329,7 +331,7 @@ bool CTCPReceiveProcessor::ReceiveData(SOCKET_INFO * socketInfo, const int & rec
 		}
 		case C_INGAME_RPC:
 		{
-			char type = CSerializer::CharDeserialize(recvBuf, &cursor);
+			char type = CharDeserialize(recvBuf, &cursor);
 			bufLen -= 1; // 캐릭터 바이트 사이즈 만큼 뺀다.
 			FRoomInfo* targetRoom = TCPProcessor->RoomManager->GetRoom(socketInfo->player);
 
@@ -340,7 +342,7 @@ bool CTCPReceiveProcessor::ReceiveData(SOCKET_INFO * socketInfo, const int & rec
 				// 멀티캐스트
 				shared_ptr<char[]> pNewBuf(new char[bufLen + sizeof(EMessageType)]);
 
-				CSerializer::SerializeEnum(S_INGAME_RPC, pNewBuf.get());
+				SerializeEnum(S_INGAME_RPC, pNewBuf.get());
 				memcpy(pNewBuf.get() + sizeof(EMessageType), recvBuf + cursor, bufLen);
 				targetRoom->SendToOtherMember(socketInfo->player->steamID, pNewBuf.get(), bufLen + sizeof(EMessageType));
 				break;
@@ -354,7 +356,7 @@ bool CTCPReceiveProcessor::ReceiveData(SOCKET_INFO * socketInfo, const int & rec
 				// 마스터에게 전달
 				shared_ptr<char[]> pNewBuf(new char[bufLen + sizeof(EMessageType)]);
 
-				CSerializer::SerializeEnum(S_INGAME_RPC, pNewBuf.get());
+				SerializeEnum(S_INGAME_RPC, pNewBuf.get());
 				memcpy(pNewBuf.get() + sizeof(EMessageType), recvBuf + cursor, bufLen);
 				Send(targetRoom->players[0]->socket, pNewBuf.get(), bufLen + sizeof(EMessageType));
 
@@ -386,7 +388,7 @@ bool CTCPReceiveProcessor::ReceiveData(SOCKET_INFO * socketInfo, const int & rec
 			// 본인을 제외한 나머지 파티원에게 전달.
 			shared_ptr<char[]> pNewBuf(new char[bufLen + sizeof(EMessageType)]);
 
-			CSerializer::SerializeEnum(S_INGAME_SyncVar, pNewBuf.get());
+			SerializeEnum(S_INGAME_SyncVar, pNewBuf.get());
 			memcpy(pNewBuf.get() + sizeof(EMessageType), recvBuf + cursor, bufLen);
 			targetRoom->SendToOtherMember(socketInfo->player->steamID, pNewBuf.get(), bufLen + sizeof(EMessageType));
 

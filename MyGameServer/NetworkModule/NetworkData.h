@@ -11,6 +11,10 @@ enum EMessageType {
 	COMMON_ECHO,
 	// 핑
 	COMMON_PING,
+
+	C_UDP_Reg,
+	S_UDP_Respawn,
+
 	// 스팀 ID 요청
 	S_Common_RequestId,
 	C_Common_AnswerId,
