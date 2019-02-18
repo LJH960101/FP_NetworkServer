@@ -53,8 +53,8 @@ void FRoomInfo::SendRoomInfoToAllMember()
 	char allBuf[MAX_PLAYER * sizeof(UINT64) + sizeof(EMessageType)];
 	int allLen = CSerializer::SerializeEnum(S_Room_Info, allBuf);
 	for (int i = 0; i < MAX_PLAYER; ++i) {
-		if (players[i] != nullptr) CSerializer::UInt64Serializer(allBuf + allLen, players[i]->steamID);
-		else CSerializer::UInt64Serializer(allBuf + allLen, 0);
+		if (players[i] != nullptr) CSerializer::UInt64Serialize(allBuf + allLen, players[i]->steamID);
+		else CSerializer::UInt64Serialize(allBuf + allLen, 0);
 		allLen += sizeof(UINT64);
 
 #ifdef DEBUG_RECV_MSG

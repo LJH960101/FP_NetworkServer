@@ -25,10 +25,14 @@ int CSerializer::BoolSerialize(char * buf, const bool& data)
 	return 1;
 }
 
-bool CSerializer::BoolDeserialize(const char * buf, int& cursor)
+bool CSerializer::BoolDeserialize(const char * buf, int* cursor)
 {
-	bool result = static_cast<bool>(*(buf + cursor));
-	cursor += 1;
+	bool result;
+	if (cursor == nullptr) result = static_cast<bool>(*buf);
+	else {
+		result = static_cast<bool>(*(buf + *cursor));
+		*cursor += 1;
+	}
 	return result;
 }
 
@@ -38,14 +42,18 @@ int CSerializer::CharSerialize(char * buf, const char& data)
 	return 1;
 }
 
-char CSerializer::CharDeserialize(const char * buf, int& cursor)
+char CSerializer::CharDeserialize(const char * buf, int* cursor)
 {
-	char result = *(buf + cursor);
-	cursor += 1;
+	char result;
+	if (cursor == nullptr) result = *buf;
+	else {
+		result = *(buf + *cursor);
+		*cursor += 1;
+	}
 	return result;
 }
 
-EMessageType CSerializer::GetEnum(char * buf, int& cursor)
+EMessageType CSerializer::GetEnum(char * buf, int* cursor)
 {
 	int type = IntDeserialize(buf, cursor);
 	return EMessageType(type);
@@ -57,25 +65,35 @@ int CSerializer::IntSerialize(char * buf, const INT32& val)
 	return sizeof(INT32);
 }
 
-INT32 CSerializer::IntDeserialize(char * buf, int& cursor)
+INT32 CSerializer::IntDeserialize(char * buf, int* cursor)
 {
 	INT32 res = 0;
-	DeSerialize(buf + cursor, (char*)&res, sizeof(INT32));
-	cursor += sizeof(INT32);
+	if (cursor == nullptr) {
+		DeSerialize(buf, (char*)&res, sizeof(INT32));
+	}
+	else {
+		DeSerialize(buf + *cursor, (char*)&res, sizeof(INT32));
+		*cursor += sizeof(INT32);
+	}
 	return res;
 }
 
-int CSerializer::UInt64Serializer(char * buf, const unsigned __int64 & val)
+int CSerializer::UInt64Serialize(char * buf, const unsigned __int64 & val)
 {
 	Serialize((char*)&val, buf, sizeof(unsigned __int64));
 	return sizeof(unsigned __int64);
 }
 
-unsigned __int64 CSerializer::UInt64Deserializer(char * buf, int& cursor)
+unsigned __int64 CSerializer::UInt64Deserialize(char * buf, int* cursor)
 {
 	unsigned __int64 res = 0;
-	DeSerialize(buf + cursor, (char*)&res, sizeof(unsigned __int64));
-	cursor += sizeof(unsigned __int64);
+	if (cursor == nullptr) {
+		DeSerialize(buf, (char*)&res, sizeof(unsigned __int64));
+	}
+	else {
+		DeSerialize(buf + *cursor, (char*)&res, sizeof(unsigned __int64));
+		*cursor += sizeof(unsigned __int64);
+	}
 	return res;
 }
 
@@ -85,11 +103,16 @@ int CSerializer::FloatSerialize(char * buf, const float& val)
 	return sizeof(float);
 }
 
-float CSerializer::FloatDeserialize(char * buf, int& cursor)
+float CSerializer::FloatDeserialize(char * buf, int* cursor)
 {
 	float res = 0;
-	DeSerialize(buf + cursor, (char*)&res, sizeof(float));
-	cursor += sizeof(float);
+	if (cursor == nullptr) {
+		DeSerialize(buf, (char*)&res, sizeof(float));
+	}
+	else {
+		DeSerialize(buf + *cursor, (char*)&res, sizeof(float));
+		*cursor += sizeof(float);
+	}
 	return res;
 }
 
@@ -101,11 +124,21 @@ int CSerializer::Vector3Serialize(char * buf, const FSerializableVector3 & val)
 	return sizeof(float) * 3;
 }
 
-FSerializableVector3 CSerializer::Vector3Deserialize(char * buf, int& cursor)
+FSerializableVector3 CSerializer::Vector3Deserialize(char * buf, int* cursor)
 {
-	float x = FloatDeserialize(buf, cursor);
-	float y = FloatDeserialize(buf, cursor);
-	float z = FloatDeserialize(buf, cursor);
+	float x;
+	float y;
+	float z;
+	if (cursor == nullptr) {
+		x = FloatDeserialize(buf);
+		y = FloatDeserialize(buf + sizeof(float));
+		z = FloatDeserialize(buf + sizeof(float) * 2);
+	}
+	else {
+		x = FloatDeserialize(buf, cursor);
+		y = FloatDeserialize(buf, cursor);
+		z = FloatDeserialize(buf, cursor);
+	}
 	FSerializableVector3 result(x, y, z);
 	return result;
 }
@@ -118,14 +151,19 @@ int CSerializer::StringSerialize(char * buf, const char * source, const int & le
 	return len + retval;
 }
 
-FSerializableString CSerializer::StringDeserializer(char * buf, int& cursor)
+FSerializableString CSerializer::StringDeserialize(char * buf, int* cursor)
 {
 	int len = IntDeserialize(buf, cursor);
 	if (len >= MAX_STRING_BUF) throw "String Deserialize : Too large buf size.";
 	FSerializableString outData;
 	outData.len = len;
-	memcpy(outData.buf, buf + cursor, len);
-	cursor += len;
+	if (cursor == nullptr) {
+		memcpy(outData.buf, buf, len);
+	}
+	else {
+		memcpy(outData.buf, buf + *cursor, len);
+		*cursor += len;
+	}
 	return outData;
 }
 

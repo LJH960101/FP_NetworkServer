@@ -153,6 +153,20 @@ void CRoomManager::ChangeRoomReady(FPlayerInfo* player, const bool& isOn)
 	mt_room.unlock();
 }
 
+int CRoomManager::GetRoomCount() {
+	return rooms.size();
+}
+
+int CRoomManager::GetMatchRoomCount()
+{
+	return matchRooms.size();
+}
+
+int CRoomManager::GetGameRoomCount()
+{
+	return gameRooms.size();
+}
+
 void CRoomManager::Update()
 {
 	// 매칭을 시켜준다.

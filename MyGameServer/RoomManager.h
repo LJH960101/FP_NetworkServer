@@ -1,7 +1,7 @@
 #pragma once
 
 //#define DEBUG_RECV_MSG
-#define MAX_PLAYER 4
+#define MAX_PLAYER 2
 #include "NetworkModule/NetworkData.h"
 #include "PlayerManager.h"
 #include <list>
@@ -32,6 +32,9 @@ public:
 	// 이를 모든 클라이언트에게 알린다.
 	void OutRoom(FPlayerInfo* innerMember);
 	void ChangeRoomReady(FPlayerInfo* player, const bool& isOn);
+	int GetRoomCount();
+	int GetMatchRoomCount();
+	int GetGameRoomCount();
 	// 매니저 밖에서 룸을 수정할때 동기성을 유지하기 위한 뮤텍스.
 	mutex mt_outClass;
 	// 한 ServerNetworkSystem Process Thread에 한번씩 호출되는 함수.

@@ -68,6 +68,11 @@ FPlayerInfo* CPlayerManager::EditPlayerIDBySocket(const SOCKET& targetSock, cons
 	return retval;
 }
 
+int CPlayerManager::GetPlayerCount()
+{
+	return players.size();
+}
+
 void CPlayerManager::RemovePlayerById(const UINT64& playerID)
 {
 	FPlayerInfo* removeNeedPoint = nullptr;

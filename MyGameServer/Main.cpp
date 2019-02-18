@@ -1,11 +1,17 @@
 #pragma comment(lib, "ws2_32")
 #include "ServerNetworkSystem.h"
+#include "UDPProcessor.h"
+#include "TCPProcessor.h"
+#include "RoomManager.h"
+#include "PlayerManager.h"
 #include "NetworkModule/Log.h"
 #include "NetworkModule/Serializer.h"
 #include "NetworkModule/NetworkData.h"
+#include "NetworkModule/MyTool.h"
+#include <thread>
+#include <conio.h>
 #include <iostream>
 #include <WinSock2.h>
-#include "NetworkModule/MyTool.h"
 
  //#define SERIAL_TEST
 
@@ -17,16 +23,38 @@ int main()
 	FSerializableVector3 a(1, 2, 3);
 	std::cout << a << std::endl;
 	int vecBufSize = CSerializer::Vector3Serialize(buf, a);
-	a = CSerializer::Vector3Deserialize(buf, c);
+	a = CSerializer::Vector3Deserialize(buf, &c);
 	std::cout << a << std::endl;
 #else
 	CLog::WriteLog(NetworkManager, Warning, CLog::Format("Game Server Start"));
 	CServerNetworkSystem* ServerSystem = CServerNetworkSystem::GetInstance();
+	std::chrono::seconds sleepDuration(3);
 
 	try
 	{
-		if (ServerSystem->Run()) {
+		if (!ServerSystem->Run()) {
 			std::cout << "FAIL!!";
+			throw;
+		}
+		std::cout << "Ready for Server Thread is awake.....\n";
+		Sleep(3000);
+		std::cout << "Press q to quit sever....\n";
+		while (true) {
+			// Check Server State
+			if (!ServerSystem->GetTCPProcessor()->IsRun() || !ServerSystem->GetUDPProcessor()->IsRun()) {
+				throw;
+			}
+			// Print Room Data
+			std::cout << "Room : " << ServerSystem->GetTCPProcessor()->RoomManager->GetRoomCount() << "\n"
+				<< "MatchRoom : " << ServerSystem->GetTCPProcessor()->RoomManager->GetMatchRoomCount() << "\n"
+				<< "GameRoom : " << ServerSystem->GetTCPProcessor()->RoomManager->GetGameRoomCount() << "\n"
+				<< "Players : " << ServerSystem->GetTCPProcessor()->PlayerManager->GetPlayerCount() << "\n\n\n";
+
+			if (_kbhit()) {
+				char key = _getch();
+				if (key == 'c') break;
+			}
+			std::this_thread::sleep_for(sleepDuration);
 		}
 	}
 	catch (const std::exception& e)
@@ -38,7 +66,7 @@ int main()
 	CLog::Join();
 	delete ServerSystem;
 
-	CLog::WriteLog(NetworkManager, Warning, CLog::Format("Game Server End"));
+	CLog::WriteLog(NetworkManager, Warning, CLog::Format("Game Server End Successfully."));
 #endif
 	
 	return 0;

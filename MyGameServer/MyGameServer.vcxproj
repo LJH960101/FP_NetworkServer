@@ -164,6 +164,8 @@
     <ClInclude Include="RoomManager.h" />
     <ClInclude Include="ServerNetworkSystem.h" />
     <ClInclude Include="ReceiveProcessor.h" />
+    <ClInclude Include="TCPProcessor.h" />
+    <ClInclude Include="UDPProcessor.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="NetworkModule\MyTool.cpp" />
@@ -175,6 +177,8 @@
     <ClCompile Include="NetworkModule\Serializer.cpp" />
     <ClCompile Include="ServerNetworkSystem.cpp" />
     <ClCompile Include="ReceiveProcessor.cpp" />
+    <ClCompile Include="TCPProcessor.cpp" />
+    <ClCompile Include="UDPProcessor.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

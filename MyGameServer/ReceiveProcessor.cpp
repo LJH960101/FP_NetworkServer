@@ -1,6 +1,7 @@
 #define  _WINSOCK_DEPRECATED_NO_WARNINGS
 #include "ReceiveProcessor.h"
 #include "ServerNetworkSystem.h"
+#include "TCPProcessor.h"
 #include "PlayerManager.h"
 #include "RoomManager.h"
 #include "NetworkModule/NetworkData.h"
@@ -20,21 +21,22 @@ typedef lock_guard<mutex> Lock;
 bool CReceiveProcessor::ReceiveData(SOCKET_INFO * socketInfo, const int & receiveLen)
 {
 	auto ServerNetworkSystem = CServerNetworkSystem::GetInstance();
+	auto TCPProcessor = ServerNetworkSystem->GetTCPProcessor();
 
 #ifdef ECHO_TEST
 	socketInfo->buf[receiveLen] = '\0';
 	printf("[%s:%d] : %s\n", inet_ntoa(socketInfo->addr.sin_addr),
 							ntohs(socketInfo->addr.sin_port),
 							socketInfo->buf);
-	CServerNetworkSystem::SendData(socketInfo, socketInfo->buf, receiveLen);
+	CTCPProcessor::SendData(socketInfo, socketInfo->buf, receiveLen);
 #else
 
 	int cursor = 0;
 	char* recvBuf = socketInfo->buf;
 	while (cursor < receiveLen) {
 		// ENUM을 제외한 길이를 계산한다.
-		int bufLen = CSerializer::IntDeserialize(recvBuf, cursor) - sizeof(EMessageType);
-		EMessageType type = CSerializer::GetEnum(recvBuf, cursor);
+		int bufLen = CSerializer::IntDeserialize(recvBuf, &cursor) - sizeof(EMessageType);
+		EMessageType type = CSerializer::GetEnum(recvBuf, &cursor);
 
 #ifdef DEBUG_RECV_MSG
 		{
@@ -51,7 +53,7 @@ bool CReceiveProcessor::ReceiveData(SOCKET_INFO * socketInfo, const int & receiv
 		case COMMON_ECHO:
 		{
 			// 받은 STRING 출력
-			FSerializableString res = CSerializer::StringDeserializer(recvBuf, cursor);
+			FSerializableString res = CSerializer::StringDeserialize(recvBuf, &cursor);
 			printf("[%s:%d] : ECHO, %s\n", inet_ntoa(socketInfo->addr.sin_addr),
 				ntohs(socketInfo->addr.sin_port),
 				res.buf);
@@ -61,7 +63,7 @@ bool CReceiveProcessor::ReceiveData(SOCKET_INFO * socketInfo, const int & receiv
 		case COMMON_PING:
 		{
 			// 시간 갱신
-			ServerNetworkSystem->PlayerManager->
+			TCPProcessor->PlayerManager->
 				GetPlayerBySocket(socketInfo->sock)->lastPongTime =
 				std::chrono::system_clock::now();
 
@@ -74,28 +76,28 @@ bool CReceiveProcessor::ReceiveData(SOCKET_INFO * socketInfo, const int & receiv
 		}
 		case C_Common_AnswerId:
 		{
-			UINT64 steamID = CSerializer::UInt64Deserializer(recvBuf, cursor);
+			UINT64 steamID = CSerializer::UInt64Deserialize(recvBuf, &cursor);
 			if (steamID == 0) break;
 			// 이미 존재한다면, 존재하는 사람을 튕겨버림.
-			FPlayerInfo* beforeUser = ServerNetworkSystem->PlayerManager->GetPlayerById(steamID);
+			FPlayerInfo* beforeUser = TCPProcessor->PlayerManager->GetPlayerById(steamID);
 			if (beforeUser) {
-				if (beforeUser->socket != socketInfo->sock) ServerNetworkSystem->CloseConnection(beforeUser->socketInfo);
+				if (beforeUser->socket != socketInfo->sock) TCPProcessor->CloseConnection(beforeUser->socketInfo);
 				else break;
 			}
 
 			// 스팀ID 갱신
-			ServerNetworkSystem->PlayerManager->
+			TCPProcessor->PlayerManager->
 				GetPlayerBySocket(socketInfo->sock)->steamID = steamID;
 
 			// 시간 갱신
-			ServerNetworkSystem->PlayerManager->
+			TCPProcessor->PlayerManager->
 				GetPlayerBySocket(socketInfo->sock)->lastPongTime =
 				std::chrono::system_clock::now();
 
 			// 방 정보 전송
 
-			Lock roomManagerLocker(ServerNetworkSystem->RoomManager->mt_outClass);
-			FRoomInfo* room = ServerNetworkSystem->RoomManager->GetRoom(ServerNetworkSystem->PlayerManager->
+			Lock roomManagerLocker(TCPProcessor->RoomManager->mt_outClass);
+			FRoomInfo* room = TCPProcessor->RoomManager->GetRoom(TCPProcessor->PlayerManager->
 														GetPlayerBySocket(socketInfo->sock));
 			room->SendRoomInfoToAllMember();
 
@@ -108,21 +110,21 @@ bool CReceiveProcessor::ReceiveData(SOCKET_INFO * socketInfo, const int & receiv
 		}
 		case C_Lobby_InviteFriend_Request:
 		{
-			UINT64 steamID = CSerializer::UInt64Deserializer(recvBuf, cursor);
+			UINT64 steamID = CSerializer::UInt64Deserialize(recvBuf, &cursor);
 			if (steamID == 0) break;
 			while (true) {
 				// 플레이어를 찾아, 플레이어에게 수락 의사를 묻는다.
-				FPlayerInfo* targetUser = ServerNetworkSystem->PlayerManager->GetPlayerById(steamID);
+				FPlayerInfo* targetUser = TCPProcessor->PlayerManager->GetPlayerById(steamID);
 				if (targetUser) {
-					UINT64 senderId = ServerNetworkSystem->PlayerManager->
+					UINT64 senderId = TCPProcessor->PlayerManager->
 						GetPlayerBySocket(socketInfo->sock)->steamID;
 					// 초대자의 이름을 담아 보낸다.
 					char senderIdBuf[sizeof(UINT64)], finalBuf[sizeof(UINT64) + sizeof(EMessageType)];
-					int uintLen = CSerializer::UInt64Serializer(senderIdBuf, senderId);
+					int uintLen = CSerializer::UInt64Serialize(senderIdBuf, senderId);
 					int allLen = CSerializer::SerializeWithEnum(S_Lobby_InviteFriend_Request, senderIdBuf, uintLen, finalBuf);
 					int retval = Send(targetUser->socket, finalBuf, allLen);
 					// 전송이 불가능 하다면 연결을 끊고 다시 찾는다.
-					if (retval == -1) ServerNetworkSystem->CloseConnection(targetUser->socketInfo);
+					if (retval == -1) TCPProcessor->CloseConnection(targetUser->socketInfo);
 					else {
 
 #ifdef DEBUG_RECV_MSG
@@ -160,9 +162,9 @@ bool CReceiveProcessor::ReceiveData(SOCKET_INFO * socketInfo, const int & receiv
 
 		case C_Lobby_InviteFriend_Answer:
 		{
-			bool isYes = CSerializer::BoolDeserialize(recvBuf, cursor);
-			UINT64 targetID = CSerializer::UInt64Deserializer(recvBuf, cursor);
-			FPlayerInfo* innerPlayer = ServerNetworkSystem->PlayerManager->GetPlayerById(targetID);
+			bool isYes = CSerializer::BoolDeserialize(recvBuf, &cursor);
+			UINT64 targetID = CSerializer::UInt64Deserialize(recvBuf, &cursor);
+			FPlayerInfo* innerPlayer = TCPProcessor->PlayerManager->GetPlayerById(targetID);
 
 #ifdef DEBUG_RECV_MSG
 			printf("[%s:%d] : C_Lobby_InviteFriend_Answer by %llu\n", inet_ntoa(socketInfo->addr.sin_addr),
@@ -174,10 +176,10 @@ bool CReceiveProcessor::ReceiveData(SOCKET_INFO * socketInfo, const int & receiv
 			// 승락했다면, 룸 이동을 시도한다.
 			int outSlot;
 
-			Lock roomManagerLocker(ServerNetworkSystem->RoomManager->mt_outClass);
+			Lock roomManagerLocker(TCPProcessor->RoomManager->mt_outClass);
 			// 룸이동 성공?
-			if (ServerNetworkSystem->RoomManager->MoveRoom(innerPlayer, socketInfo->player, outSlot)) {
-				FRoomInfo* innerRoom = ServerNetworkSystem->RoomManager->GetRoom(innerPlayer);
+			if (TCPProcessor->RoomManager->MoveRoom(innerPlayer, socketInfo->player, outSlot)) {
+				FRoomInfo* innerRoom = TCPProcessor->RoomManager->GetRoom(innerPlayer);
 				innerRoom->SendRoomInfoToAllMember();
 				printf("Success to move.\n");
 			}
@@ -196,15 +198,15 @@ bool CReceiveProcessor::ReceiveData(SOCKET_INFO * socketInfo, const int & receiv
 		case C_Lobby_Set_PartyKing:
 		{
 			// 파티장으로 임명할 슬롯을 파싱한다.
-			int targetSlot = CSerializer::IntDeserialize(recvBuf, cursor);
+			int targetSlot = CSerializer::IntDeserialize(recvBuf, &cursor);
 
 #ifdef DEBUG_RECV_MSG
 			printf("[%s:%d] : C_Lobby_Set_PartyKing by %d\n", inet_ntoa(socketInfo->addr.sin_addr),
 				ntohs(socketInfo->addr.sin_port), targetSlot);
 #endif
-			Lock roomManagerLocker(ServerNetworkSystem->RoomManager->mt_outClass);
+			Lock roomManagerLocker(TCPProcessor->RoomManager->mt_outClass);
 			// 방을 찾는다.
-			FRoomInfo* innerRoom = ServerNetworkSystem->RoomManager->GetRoom(socketInfo->player);
+			FRoomInfo* innerRoom = TCPProcessor->RoomManager->GetRoom(socketInfo->player);
 			if (innerRoom == nullptr ||							// 방이 없거나
 				innerRoom->players[0] != socketInfo->player ||	// 요청자가 방장이 아니거나
 				targetSlot >= MAX_PLAYER ||						// 슬롯이 잘못 되었거나
@@ -227,15 +229,15 @@ bool CReceiveProcessor::ReceiveData(SOCKET_INFO * socketInfo, const int & receiv
 		case C_Lobby_FriendKick_Request:
 		{
 			// 강퇴할 슬롯을 파싱한다.
-			int targetSlot = CSerializer::IntDeserialize(recvBuf, cursor);
+			int targetSlot = CSerializer::IntDeserialize(recvBuf, &cursor);
 
 #ifdef DEBUG_RECV_MSG
 			printf("[%s:%d] : C_Lobby_FriendKick_Request by %d\n", inet_ntoa(socketInfo->addr.sin_addr),
 				ntohs(socketInfo->addr.sin_port), targetSlot);
 #endif
-			Lock roomManagerLocker(ServerNetworkSystem->RoomManager->mt_outClass);
+			Lock roomManagerLocker(TCPProcessor->RoomManager->mt_outClass);
 			// 방을 찾는다.
-			FRoomInfo* innerRoom = ServerNetworkSystem->RoomManager->GetRoom(socketInfo->player);
+			FRoomInfo* innerRoom = TCPProcessor->RoomManager->GetRoom(socketInfo->player);
 			if (innerRoom == nullptr ||										// 방이 없거나
 				targetSlot < 0 ||
 				targetSlot >= MAX_PLAYER ||									// 슬롯이 잘못 되었거나
@@ -253,9 +255,9 @@ bool CReceiveProcessor::ReceiveData(SOCKET_INFO * socketInfo, const int & receiv
 
 			// 플레이어를 기존 방에서 추방시킨다음, 새로운 방에 넣어준다.
 			FPlayerInfo* kickTargetPlayer = innerRoom->players[targetSlot];
-			ServerNetworkSystem->RoomManager->OutRoom(kickTargetPlayer);
-			ServerNetworkSystem->RoomManager->CreateRoom(kickTargetPlayer);
-			FRoomInfo* kickPlayerRoom = ServerNetworkSystem->RoomManager->GetRoom(kickTargetPlayer);
+			TCPProcessor->RoomManager->OutRoom(kickTargetPlayer);
+			TCPProcessor->RoomManager->CreateRoom(kickTargetPlayer);
+			FRoomInfo* kickPlayerRoom = TCPProcessor->RoomManager->GetRoom(kickTargetPlayer);
 
 			// 강퇴 된 이후의 방 정보를 알려준다.
 			kickPlayerRoom->SendRoomInfoToAllMember();
@@ -264,12 +266,12 @@ bool CReceiveProcessor::ReceiveData(SOCKET_INFO * socketInfo, const int & receiv
 		}
 		case C_Lobby_MatchRequest:
 		{
-			bool isOn = CSerializer::BoolDeserialize(recvBuf, cursor);
+			bool isOn = CSerializer::BoolDeserialize(recvBuf, &cursor);
 			if (socketInfo->player->steamID == 0) break;
 
 			// 룸매니저에 매칭 상태 변경을 요청한다.
-			Lock roomManagerLocker(ServerNetworkSystem->RoomManager->mt_outClass);
-			ServerNetworkSystem->RoomManager->ChangeRoomReady(socketInfo->player, isOn);
+			Lock roomManagerLocker(TCPProcessor->RoomManager->mt_outClass);
+			TCPProcessor->RoomManager->ChangeRoomReady(socketInfo->player, isOn);
 
 #ifdef DEBUG_RECV_MSG
 			printf("[%s:%d] : C_Lobby_MatchRequest %d id : %llu\n", inet_ntoa(socketInfo->addr.sin_addr),
@@ -280,11 +282,11 @@ bool CReceiveProcessor::ReceiveData(SOCKET_INFO * socketInfo, const int & receiv
 		}
 		case C_Debug_RoomStart:
 		{
-			FRoomInfo* currentRoom = ServerNetworkSystem->RoomManager->GetRoom(socketInfo->player);
+			FRoomInfo* currentRoom = TCPProcessor->RoomManager->GetRoom(socketInfo->player);
 			// 혼자 있을때만 방이동을 한다.
 			if (currentRoom->GetRoomCount() != 1) break;
-			Lock roomManagerLocker(ServerNetworkSystem->RoomManager->mt_outClass);
-			ServerNetworkSystem->RoomManager->ForceJoinRoom(socketInfo->player);
+			Lock roomManagerLocker(TCPProcessor->RoomManager->mt_outClass);
+			TCPProcessor->RoomManager->ForceJoinRoom(socketInfo->player);
 
 #ifdef DEBUG_RECV_MSG
 			printf("[%s:%d] : C_Debug_RoomStart %llu\n", inet_ntoa(socketInfo->addr.sin_addr),
@@ -294,12 +296,12 @@ bool CReceiveProcessor::ReceiveData(SOCKET_INFO * socketInfo, const int & receiv
 		}
 		case C_Debug_GameStart:
 		{
-			FRoomInfo* currentRoom = ServerNetworkSystem->RoomManager->GetRoom(socketInfo->player);
+			FRoomInfo* currentRoom = TCPProcessor->RoomManager->GetRoom(socketInfo->player);
 			if (currentRoom->GetRoomCount() != 1) break;
-			Lock roomManagerLocker(ServerNetworkSystem->RoomManager->mt_outClass);
-			bool onSuccess = ServerNetworkSystem->RoomManager->ForceJoinGameRoom(socketInfo->player);
+			Lock roomManagerLocker(TCPProcessor->RoomManager->mt_outClass);
+			bool onSuccess = TCPProcessor->RoomManager->ForceJoinGameRoom(socketInfo->player);
 			// 게임중인 룸이 없다면, 게임룸으로 강제 이동한다.
-			if (!onSuccess) ServerNetworkSystem->RoomManager->ForceChangeGameState(currentRoom);
+			if (!onSuccess) TCPProcessor->RoomManager->ForceChangeGameState(currentRoom);
 
 #ifdef DEBUG_RECV_MSG
 			printf("[%s:%d] : C_Debug_GameStart %llu newRoom? : %d\n", inet_ntoa(socketInfo->addr.sin_addr),
@@ -309,7 +311,7 @@ bool CReceiveProcessor::ReceiveData(SOCKET_INFO * socketInfo, const int & receiv
 		}
 		case C_INGAME_SPAWN:
 		{
-			FRoomInfo* targetRoom = ServerNetworkSystem->RoomManager->GetRoom(socketInfo->player);
+			FRoomInfo* targetRoom = TCPProcessor->RoomManager->GetRoom(socketInfo->player);
 			// 방장이라면 그대로 전달해준다.
 			if (targetRoom->players[0] == socketInfo->player) {
 				shared_ptr<char[]> pNewBuf(new char[bufLen + sizeof(EMessageType)]);
@@ -327,9 +329,9 @@ bool CReceiveProcessor::ReceiveData(SOCKET_INFO * socketInfo, const int & receiv
 		}
 		case C_INGAME_RPC:
 		{
-			char type = CSerializer::CharDeserialize(recvBuf, cursor);
+			char type = CSerializer::CharDeserialize(recvBuf, &cursor);
 			bufLen -= 1; // 캐릭터 바이트 사이즈 만큼 뺀다.
-			FRoomInfo* targetRoom = ServerNetworkSystem->RoomManager->GetRoom(socketInfo->player);
+			FRoomInfo* targetRoom = TCPProcessor->RoomManager->GetRoom(socketInfo->player);
 
 			switch (type)
 			{
@@ -380,7 +382,7 @@ bool CReceiveProcessor::ReceiveData(SOCKET_INFO * socketInfo, const int & receiv
 		}
 		case C_INGAME_SyncVar:
 		{
-			FRoomInfo* targetRoom = ServerNetworkSystem->RoomManager->GetRoom(socketInfo->player);
+			FRoomInfo* targetRoom = TCPProcessor->RoomManager->GetRoom(socketInfo->player);
 			// 본인을 제외한 나머지 파티원에게 전달.
 			shared_ptr<char[]> pNewBuf(new char[bufLen + sizeof(EMessageType)]);
 

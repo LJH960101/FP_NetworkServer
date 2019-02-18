@@ -51,6 +51,12 @@
     <ClInclude Include="NetworkModule\MyTool.h">
       <Filter>Header Files\NetworkModule</Filter>
     </ClInclude>
+    <ClInclude Include="TCPProcessor.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="UDPProcessor.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="NetworkModule\Log.cpp">
@@ -79,6 +85,12 @@
     </ClCompile>
     <ClCompile Include="NetworkModule\MyTool.cpp">
       <Filter>Source Files\NetworkModule</Filter>
+    </ClCompile>
+    <ClCompile Include="TCPProcessor.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="UDPProcessor.cpp">
+      <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

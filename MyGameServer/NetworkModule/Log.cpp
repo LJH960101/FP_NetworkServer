@@ -101,6 +101,10 @@ string CLog::_LogTypeToString(const ELogType& logType)
 		return "PlayerManager";
 	case ReceiveProcessor:
 		return "ReceiveProcessor";
+	case TCPProcessor:
+		return "TCPProcessor";
+	case UDPProcessor:
+		return "UDPProcessor";
 	default:
 		return "UnkownLogType";
 	}

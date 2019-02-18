@@ -20,7 +20,9 @@ enum ELogType {
 	ServerNetworkSystem,
 	RoomManager,
 	PlayerManager,
-	ReceiveProcessor
+	ReceiveProcessor,
+	TCPProcessor,
+	UDPProcessor
 };
 
 struct FLog
